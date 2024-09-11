@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "iss"
+version = "0.1.0"
+description = "Python package for computing the iterated sums signature"
+authors = ["irkri <irkri@irkri.net>"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+numpy = "^2.0.2"
+numba = "^0.60.0"
+
+[tool.poetry.group.dev.dependencies]
+matplotlib = "^3.9.2"
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
