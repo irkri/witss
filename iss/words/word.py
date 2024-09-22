@@ -7,7 +7,8 @@ import numpy as np
 class Word:
     """Words evaluate the iterated sums signature at a certain level."""
 
-    FORMAT = re.compile(r"(?:(\d)|\((\d+)\))(?:\^(?:(-?\d)|\((-?\d+)\)))?")
+    RE = re.compile(r"(\[(((-?\d)|\((-?\d+)\))(\^((-?\d)|\((-?\d+)\)))?)+\])+")
+    RE_SINGLE = re.compile(r"(?:(\d)|\((\d+)\))(?:\^(?:(-?\d)|\((-?\d+)\)))?")
 
     def __init__(self, word: Optional[str] = None) -> None:
         self._letters: list[list[tuple[int, int]]] = []
@@ -16,12 +17,14 @@ class Word:
 
     def multiply(self, word: str | Self) -> None:
         if isinstance(word, str):
+            if Word.RE.fullmatch(word) is None:
+                raise ValueError("Input string has invalid format")
             for bracket in word.split("]")[:-1]:
                 self._letters.append([])
                 bracket = bracket[1:]
                 dimexps = [
                     ("".join(x[:2]), "".join(x[2:]))
-                    for x in Word.FORMAT.findall(bracket)
+                    for x in Word.RE_SINGLE.findall(bracket)
                 ]
                 dimexps = [
                     (int(dim), int(exp) if exp != "" else 1)
@@ -52,11 +55,13 @@ class Word:
         new_word.multiply(self)
         return new_word
 
-    def numpy(self) -> tuple[np.ndarray, np.ndarray]:
-        return (
-            np.array([[a[0] for a in l] for l in self._letters]),
-            np.array([[a[1] for a in l] for l in self._letters]),
-        )
+    def numpy(self) -> np.ndarray:
+        max_dim = max(l[0] for el in self._letters for l in el)
+        exps = np.zeros((len(self._letters), max_dim), dtype=np.int32)
+        for iel, el in enumerate(self._letters):
+            for l in el:
+                exps[iel, l[0]-1] = l[1]
+        return exps
 
     def __str__(self) -> str:
         strings = []
