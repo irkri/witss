@@ -1,13 +1,19 @@
+from typing import Optional
+
 import numpy as np
 
 from ..words.word import Word
-from .compute import _iterated_sums_compiled, _partial_iterated_sums_compiled
+from .compute import (_exp_iterated_sums_compiled, _iterated_sums_compiled,
+                      _partial_exp_iterated_sums_compiled,
+                      _partial_iterated_sums_compiled)
+from .weighting import Exponential, Weighting
 
 
 def iss(
     x: np.ndarray,
     word: Word | str,
     partial: bool = False,
+    weighting: Optional[Weighting] = None,
 ) -> np.ndarray:
     """Calculate the iterated sums signature of the given time series
     evaluated at the given word.
@@ -24,7 +30,23 @@ def iss(
             for ``word=[1]`` and ``word=[1][2]``.
     """
     word = word if isinstance(word, Word) else Word(word)
-    if not partial:
+    if weighting is None:
+        if partial:
+            return _partial_iterated_sums_compiled(x, word.numpy())
         return _iterated_sums_compiled(x, word.numpy())
+    elif isinstance(weighting, Exponential):
+        if partial:
+            return _partial_exp_iterated_sums_compiled(
+                x,
+                word.numpy(),
+                weighting.alpha,
+                weighting.time(x.shape[0]),
+            )
+        return _exp_iterated_sums_compiled(
+            x,
+            word.numpy(),
+            weighting.alpha,
+            weighting.time(x.shape[0]),
+        )
     else:
-        return _partial_iterated_sums_compiled(x, word.numpy())
+        raise NotImplementedError
