@@ -3,10 +3,11 @@ from typing import Optional
 import numpy as np
 
 from ..words.word import Word
-from .compute import (_exp_iterated_sums_compiled, _iterated_sums_compiled,
+from .compute import (_cos_iterated_sums_compiled, _exp_iterated_sums_compiled,
+                      _iterated_sums_compiled,
                       _partial_exp_iterated_sums_compiled,
                       _partial_iterated_sums_compiled)
-from .weighting import Exponential, Weighting
+from .weighting import Cosine, Exponential, Weighting
 
 
 def iss(
@@ -30,6 +31,8 @@ def iss(
             for ``word=[1]`` and ``word=[1][2]``.
     """
     word = word if isinstance(word, Word) else Word(word)
+    if word.is_empty():
+        return np.ones((x.shape[0], ), dtype=np.float64)
     if weighting is None:
         if partial:
             return _partial_iterated_sums_compiled(x, word.numpy())
@@ -47,6 +50,17 @@ def iss(
             word.numpy(),
             weighting.alpha,
             weighting.time(x.shape[0]),
+        )
+    elif isinstance(weighting, Cosine):
+        if partial:
+            raise NotImplementedError(
+                "Partial cosine weighting is not implemented"
+            )
+        return _cos_iterated_sums_compiled(
+            x, word.numpy(),
+            alpha=weighting.alpha,
+            expansion=weighting.expansion(word),
+            time=weighting.time(x.shape[0]),
         )
     else:
         raise NotImplementedError
