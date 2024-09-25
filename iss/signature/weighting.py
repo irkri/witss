@@ -12,12 +12,21 @@ class Weighting:
 
 class Exponential(Weighting):
 
-    def __init__(self, alpha: Sequence[float] | np.ndarray) -> None:
+    def __init__(
+        self,
+        alpha: Sequence[float] | np.ndarray,
+        outer: bool = True,
+    ) -> None:
         self._alpha = alpha
+        self._outer = outer
 
     @property
     def alpha(self) -> np.ndarray:
         return np.array(self._alpha, dtype=np.float64)
+
+    @property
+    def outer(self) -> bool:
+        return self._outer
 
     def time(self, T: int) -> np.ndarray:
         return np.arange(1, T+1, dtype=np.float64) / T
@@ -38,6 +47,10 @@ class Cosine(Weighting):
     @property
     def alpha(self) -> np.ndarray:
         return np.array(self._alpha, dtype=np.float64)
+
+    @property
+    def outer(self) -> bool:
+        return self._outer
 
     def time(self, T: int) -> np.ndarray:
         return np.arange(1, T+1, dtype=np.float64) / T

@@ -23,12 +23,12 @@ def test_base() -> None:
 
 
 def test_partial() -> None:
-    x = np.random.normal(size=(5, 3))
+    x = np.random.normal(size=(100, 3))
     word = iss.Word("[12^3][32][12]")
 
-    actual = np.zeros((3, 5))
+    actual = np.zeros((3, 100))
 
-    for t in range(5):
+    for t in range(100):
         for t_3 in range(t+1):
             actual[0, t] += (
                 x[t_3, 0] * x[t_3, 1] ** 3
@@ -49,6 +49,35 @@ def test_partial() -> None:
 
 
 def test_exp() -> None:
+    x = np.random.normal(size=(50, 3))
+    word = iss.Word("[13][2^2][1]")
+    alpha = np.array([.75, .5])
+
+    actual = np.zeros((50, ))
+
+    for t in range(50):
+        for t_3 in range(t+1):
+            for t_2 in range(t_3):
+                for t_1 in range(t_2):
+                    actual[t] += (
+                          x[t_3, 0]
+                        * x[t_2, 1] **2
+                        * x[t_1, 0] * x[t_1, 2]
+                        * np.exp(-alpha[1] * (t_3 - t_2) / 50)
+                        * np.exp(-alpha[0] * (t_2 - t_1) / 50)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(
+            x, word,
+            partial=False,
+            weighting=iss.weighting.Exponential(alpha, outer=False),
+        ),
+    )
+
+
+def test_outer_exp() -> None:
     x = np.random.normal(size=(50, 3))
     word = iss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8, 2])
@@ -73,12 +102,49 @@ def test_exp() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha),
+            weighting=iss.weighting.Exponential(alpha, outer=True),
         ),
     )
 
 
 def test_partial_exp() -> None:
+    x = np.random.normal(size=(50, 3))
+    word = iss.Word("[12^3][32][12]")
+    alpha = np.array([.4, .8])
+
+    actual = np.zeros((3, 50))
+
+    for t in range(50):
+        for t_3 in range(t+1):
+            actual[0, t] += (
+                x[t_3, 0] * x[t_3, 1] ** 3
+            )
+            for t_2 in range(t_3):
+                actual[1, t] += (
+                    x[t_2, 0] * x[t_2, 1] ** 3
+                    * x[t_3, 1] * x[t_3, 2]
+                    * np.exp(-alpha[0] * (t_3 - t_2) / 50)
+                )
+                for t_1 in range(t_2):
+                    actual[2, t] += (
+                          x[t_3, 0] * x[t_3, 1]
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                        * np.exp(-alpha[1] * (t_3 - t_2) / 50)
+                        * np.exp(-alpha[0] * (t_2 - t_1) / 50)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(
+            x, word,
+            partial=True,
+            weighting=iss.weighting.Exponential(alpha, outer=False),
+        ),
+    )
+
+
+def test_partial_outer_exp() -> None:
     x = np.random.normal(size=(50, 3))
     word = iss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8, 2])
@@ -119,6 +185,62 @@ def test_partial_exp() -> None:
 
 
 def test_cos() -> None:
+    x = np.random.random((50, 3))
+    word = iss.Word("[12][2][33]")
+    alpha = np.pi * np.array([-.2, .6])
+
+    actual = np.zeros((x.shape[0], ))
+    for t in range(x.shape[0]):
+        for t_3 in range(t+1):
+            for t_2 in range(t_3):
+                for t_1 in range(t_2):
+                    actual[t] += (
+                          x[t_1, 0] * x[t_1, 1]
+                        * x[t_2, 1]
+                        * x[t_3, 2] ** 2
+                        * np.cos(alpha[1] * (t_3 - t_2) / 50)
+                        * np.cos(alpha[0] * (t_2 - t_1) / 50)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(
+            x, word,
+            partial=False,
+            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=False),
+        ),
+        rtol=1e-4,
+    )
+
+    x = np.random.random((50, 3))
+    word = iss.Word("[2^2][1][13^3]")
+    alpha = np.pi * np.array([1, .6])
+
+    actual = np.zeros((x.shape[0], ))
+    for t in range(x.shape[0]):
+        for t_3 in range(t+1):
+            for t_2 in range(t_3):
+                for t_1 in range(t_2):
+                    actual[t] += (
+                          x[t_1, 1] ** 2
+                        * x[t_2, 0]
+                        * x[t_3, 0] * x[t_3, 2] ** 3
+                        * np.cos(alpha[1] * (t_3 - t_2) / 50) ** 2
+                        * np.cos(alpha[0] * (t_2 - t_1) / 50) ** 2
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(
+            x, word,
+            partial=False,
+            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=False),
+        ),
+        rtol=1e-4,
+    )
+
+
+def test_cos_outer() -> None:
     x = np.random.random((50, 3))
     word = iss.Word("[12][2][33]")
     alpha = np.pi * np.array([.4, .8, 2])
