@@ -2,12 +2,15 @@ import numba
 import numpy as np
 
 
+# --- REALS ---
+
+
 @numba.njit(
     "f8[:](f8[:,:], i4[:,:])",
     fastmath=True,
     cache=True,
 )
-def _iterated_sums_compiled(
+def _reals(
     Z: np.ndarray,
     exps: np.ndarray,
 ) -> np.ndarray:
@@ -28,7 +31,7 @@ def _iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _partial_iterated_sums_compiled(
+def _partial_reals(
     Z: np.ndarray,
     exps: np.ndarray,
 ) -> np.ndarray:
@@ -51,7 +54,7 @@ def _partial_iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _exp_iterated_sums_compiled(
+def _exp_reals(
     Z: np.ndarray,
     exps: np.ndarray,
     alpha: np.ndarray,
@@ -78,7 +81,7 @@ def _exp_iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _exp_outer_iterated_sums_compiled(
+def _exp_outer_reals(
     Z: np.ndarray,
     exps: np.ndarray,
     alpha: np.ndarray,
@@ -105,7 +108,7 @@ def _exp_outer_iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _partial_exp_iterated_sums_compiled(
+def _partial_exp_reals(
     Z: np.ndarray,
     exps: np.ndarray,
     alpha: np.ndarray,
@@ -134,7 +137,7 @@ def _partial_exp_iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _partial_exp_outer_iterated_sums_compiled(
+def _partial_exp_outer_reals(
     Z: np.ndarray,
     exps: np.ndarray,
     alpha: np.ndarray,
@@ -162,7 +165,7 @@ def _partial_exp_outer_iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _cos_iterated_sums_compiled(
+def _cos_reals(
     X: np.ndarray,
     exps: np.ndarray,
     alpha: np.ndarray,
@@ -199,7 +202,7 @@ def _cos_iterated_sums_compiled(
     fastmath=True,
     cache=True,
 )
-def _cos_outer_iterated_sums_compiled(
+def _cos_outer_reals(
     X: np.ndarray,
     exps: np.ndarray,
     alpha: np.ndarray,
@@ -229,4 +232,59 @@ def _cos_outer_iterated_sums_compiled(
         tmp = tmp * (np.sin(alpha[-1] * time)**expansion[s, -2])
         tmp = tmp * (np.cos(alpha[-1] * time)**expansion[s, -1])
         result += expansion[s, 0] * tmp
+    return result
+
+
+# --- ARCTIC ---
+
+
+@numba.njit(
+    "f8[:](f8[:])",
+    fastmath=True,
+    cache=True,
+)
+def cummax(x):
+    rmax = x[0]
+    y = np.empty_like(x)
+    for i, val in enumerate(x):
+        if val > rmax: rmax = val
+        y[i] = rmax
+    return y
+
+
+@numba.njit(
+    "f8[:](f8[:,:], i4[:,:])",
+    fastmath=True,
+    cache=True,
+)
+def _arctic(
+    Z: np.ndarray,
+    exps: np.ndarray,
+) -> np.ndarray:
+    tmp = np.zeros((Z.shape[0], ), dtype=np.float64)
+    for k, exp in enumerate(exps):
+        for i, e in enumerate(exp):
+            if e != 0:
+                tmp = tmp + (Z[:, i] * e)
+        tmp = cummax(tmp)
+    return tmp
+
+
+@numba.njit(
+    "f8[:,:](f8[:,:], i4[:,:])",
+    fastmath=True,
+    cache=True,
+)
+def _partial_arctic(
+    Z: np.ndarray,
+    exps: np.ndarray,
+) -> np.ndarray:
+    result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
+    tmp = np.zeros((Z.shape[0], ), dtype=np.float64)
+    for k, exp in enumerate(exps):
+        for i, e in enumerate(exp):
+            if e != 0:
+                tmp = tmp + (Z[:, i] * e)
+        tmp = cummax(tmp)
+        result[k] = tmp
     return result

@@ -3,14 +3,10 @@ from typing import Optional
 import numpy as np
 
 from ..words.word import Word
-from .compute import (_cos_iterated_sums_compiled,
-                      _cos_outer_iterated_sums_compiled,
-                      _exp_iterated_sums_compiled,
-                      _exp_outer_iterated_sums_compiled,
-                      _iterated_sums_compiled,
-                      _partial_exp_iterated_sums_compiled,
-                      _partial_exp_outer_iterated_sums_compiled,
-                      _partial_iterated_sums_compiled)
+from .compute import (_arctic, _cos_outer_reals, _cos_reals, _exp_outer_reals,
+                      _exp_reals, _partial_arctic, _partial_exp_outer_reals,
+                      _partial_exp_reals, _partial_reals, _reals)
+from .semiring import Arctic, Reals, Semiring
 from .weighting import Cosine, Exponential, Weighting
 
 
@@ -19,6 +15,7 @@ def iss(
     word: Word | str,
     partial: bool = False,
     weighting: Optional[Weighting] = None,
+    semiring: Semiring = Reals(),
 ) -> np.ndarray:
     """Calculate the iterated sums signature of the given time series
     evaluated at the given word.
@@ -36,8 +33,20 @@ def iss(
         weighting (Weighting, optional): Weighting for the iterated sum
             that boosts or penalizes distances between time steps.
             Defaults to None.
+        semiring (Semiring, optional): Sets the semiring for the
+            iterated sum. This changes the behavior of the ISS. Defaults
+            to ``Reals``.
     """
     word = word if isinstance(word, Word) else Word(word)
+
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+
+    type_ = None
+    if x.dtype != np.float64:
+        type_ = x.dtype
+        x = x.astype(np.float64)
+
     if word.is_empty():
         return np.ones((x.shape[0], ), dtype=np.float64)
     if x.ndim == 1:
@@ -49,33 +58,58 @@ def iss(
         return y
     if x.ndim > 3:
         raise ValueError("Input array has to have at most 3 dimensions")
+
+    if isinstance(semiring, Reals):
+        result = _issR(x, word, partial=partial, weighting=weighting)
+    elif isinstance(semiring, Arctic):
+        result = _issA(x, word, partial=partial, weighting=weighting)
+    elif isinstance(semiring, Bayesian):
+        result = _issB(x, word, partial=partial, weighting=weighting)
+    else:
+        raise ValueError(f"Unknown semiring {semiring!r}")
+
+    if type_ is not None:
+        x = x.astype(type_)
+        try:
+            result = result.astype(type_)
+        except:
+            pass
+    return result
+
+
+def _issR(
+    x: np.ndarray,
+    word: Word,
+    partial: bool = False,
+    weighting: Optional[Weighting] = None,
+) -> np.ndarray:
     if weighting is None:
         if partial:
-            return _partial_iterated_sums_compiled(x, word.numpy())
-        return _iterated_sums_compiled(x, word.numpy())
+            return _partial_reals(x, word.numpy())
+        return _reals(x, word.numpy())
     elif isinstance(weighting, Exponential):
         if partial:
             if weighting.outer:
-                return _partial_exp_outer_iterated_sums_compiled(
+                return _partial_exp_outer_reals(
                     x,
                     word.numpy(),
                     weighting.alpha,
                     weighting.time(x.shape[0]),
                 )
-            return _partial_exp_iterated_sums_compiled(
+            return _partial_exp_reals(
                 x,
                 word.numpy(),
                 weighting.alpha,
                 weighting.time(x.shape[0]),
             )
         if weighting.outer:
-            return _exp_outer_iterated_sums_compiled(
+            return _exp_outer_reals(
                 x,
                 word.numpy(),
                 weighting.alpha,
                 weighting.time(x.shape[0]),
             )
-        return _exp_iterated_sums_compiled(
+        return _exp_reals(
             x,
             word.numpy(),
             weighting.alpha,
@@ -87,13 +121,13 @@ def iss(
                 "Partial cosine weighting is not implemented"
             )
         if weighting.outer:
-            return _cos_outer_iterated_sums_compiled(
+            return _cos_outer_reals(
                 x, word.numpy(),
                 alpha=weighting.alpha,
                 expansion=weighting.expansion(word),
                 time=weighting.time(x.shape[0]),
             )
-        return _cos_iterated_sums_compiled(
+        return _cos_reals(
             x, word.numpy(),
             alpha=weighting.alpha,
             expansion=weighting.expansion(word),
@@ -101,3 +135,19 @@ def iss(
         )
     else:
         raise NotImplementedError
+
+
+def _issA(
+    x: np.ndarray,
+    word: Word,
+    partial: bool = False,
+    weighting: Optional[Weighting] = None,
+) -> np.ndarray:
+    if weighting is None:
+        if partial:
+            return _partial_arctic(x, word.numpy())
+        return _arctic(x, word.numpy())
+    else:
+        raise NotImplementedError(
+            "Weighted arctic iterated sums are not supported"
+        )

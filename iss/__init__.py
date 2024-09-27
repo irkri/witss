@@ -1,3 +1,2 @@
-from .signature import iss
-from .signature import weighting
+from .signature import iss, semiring, weighting
 from .words import Word
