@@ -6,15 +6,18 @@ import numpy as np
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:])",
+    "f8[:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _reals(
     Z: np.ndarray,
     exps: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, Z.shape[0]+1)
     for k, exp in enumerate(exps):
         for i, e in enumerate(exp):
             if e != 0:
@@ -23,25 +26,39 @@ def _reals(
         if k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
             tmp[0] = 0
+            if norm:
+                tmp[k+1:] = tmp[k+1:] / div[:-(k+1)] # type: ignore
+    if norm:
+        if len(exps) > 1:
+            tmp[len(exps)-1:] = (
+                tmp[len(exps)-1:] / div[:-len(exps)+1] # type: ignore
+            )
+        else:
+            tmp = tmp / div # type: ignore
     return tmp
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:])",
+    "f8[:,:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _partial_reals(
     Z: np.ndarray,
     exps: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, Z.shape[0]+1)
     for k, exp in enumerate(exps):
         for i, e in enumerate(exp):
             if e != 0:
                 tmp = tmp * (Z[:, i] ** e)
         tmp = np.cumsum(tmp)
+        if norm:
+            tmp = tmp / div
         result[k] = tmp
         if k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
@@ -285,6 +302,47 @@ def _partial_arctic(
         for i, e in enumerate(exp):
             if e != 0:
                 tmp = tmp + (Z[:, i] * e)
+        tmp = cummax(tmp)
+        result[k] = tmp
+    return result
+
+
+# --- BAYESIAN ---
+
+
+@numba.njit(
+    "f8[:](f8[:,:], i4[:,:])",
+    fastmath=True,
+    cache=True,
+)
+def _bayesian(
+    Z: np.ndarray,
+    exps: np.ndarray,
+) -> np.ndarray:
+    tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    for k, exp in enumerate(exps):
+        for i, e in enumerate(exp):
+            if e != 0:
+                tmp = tmp * (Z[:, i] ** e)
+        tmp = cummax(tmp)
+    return tmp
+
+
+@numba.njit(
+    "f8[:,:](f8[:,:], i4[:,:])",
+    fastmath=True,
+    cache=True,
+)
+def _partial_bayesian(
+    Z: np.ndarray,
+    exps: np.ndarray,
+) -> np.ndarray:
+    result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
+    tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    for k, exp in enumerate(exps):
+        for i, e in enumerate(exp):
+            if e != 0:
+                tmp = tmp * (Z[:, i] ** e)
         tmp = cummax(tmp)
         result[k] = tmp
     return result

@@ -1,12 +1,14 @@
+import warnings
 from typing import Optional
 
 import numpy as np
 
 from ..words.word import Word
-from .compute import (_arctic, _cos_outer_reals, _cos_reals, _exp_outer_reals,
-                      _exp_reals, _partial_arctic, _partial_exp_outer_reals,
+from .compute import (_arctic, _bayesian, _cos_outer_reals, _cos_reals,
+                      _exp_outer_reals, _exp_reals, _partial_arctic,
+                      _partial_bayesian, _partial_exp_outer_reals,
                       _partial_exp_reals, _partial_reals, _reals)
-from .semiring import Arctic, Reals, Semiring
+from .semiring import Arctic, Bayesian, Reals, Semiring
 from .weighting import Cosine, Exponential, Weighting
 
 
@@ -16,6 +18,7 @@ def iss(
     partial: bool = False,
     weighting: Optional[Weighting] = None,
     semiring: Semiring = Reals(),
+    normalize: bool = False,
 ) -> np.ndarray:
     """Calculate the iterated sums signature of the given time series
     evaluated at the given word.
@@ -36,6 +39,9 @@ def iss(
         semiring (Semiring, optional): Sets the semiring for the
             iterated sum. This changes the behavior of the ISS. Defaults
             to ``Reals``.
+        normalize (bool, optional): If True, normalizes the iterated sum
+            for the real semiring by normalizing each cumulative sum.
+            This prevents overflow. Defaults to False.
     """
     word = word if isinstance(word, Word) else Word(word)
 
@@ -60,7 +66,11 @@ def iss(
         raise ValueError("Input array has to have at most 3 dimensions")
 
     if isinstance(semiring, Reals):
-        result = _issR(x, word, partial=partial, weighting=weighting)
+        result = _issR(x, word,
+            partial=partial,
+            weighting=weighting,
+            normalize=normalize,
+        )
     elif isinstance(semiring, Arctic):
         result = _issA(x, word, partial=partial, weighting=weighting)
     elif isinstance(semiring, Bayesian):
@@ -82,11 +92,12 @@ def _issR(
     word: Word,
     partial: bool = False,
     weighting: Optional[Weighting] = None,
+    normalize: bool = False,
 ) -> np.ndarray:
     if weighting is None:
         if partial:
             return _partial_reals(x, word.numpy())
-        return _reals(x, word.numpy())
+        return _reals(x, word.numpy(), normalize)
     elif isinstance(weighting, Exponential):
         if partial:
             if weighting.outer:
@@ -147,6 +158,28 @@ def _issA(
         if partial:
             return _partial_arctic(x, word.numpy())
         return _arctic(x, word.numpy())
+    else:
+        raise NotImplementedError(
+            "Weighted arctic iterated sums are not supported"
+        )
+
+
+def _issB(
+    x: np.ndarray,
+    word: Word,
+    partial: bool = False,
+    weighting: Optional[Weighting] = None,
+) -> np.ndarray:
+    if np.any(x < 0):
+        warnings.warn(
+            "Input array contains negative numbers, which are prohibited in "
+            "the Bayesian semiring. Output might not match the iterated sum.",
+            RuntimeWarning,
+        )
+    if weighting is None:
+        if partial:
+            return _partial_bayesian(x, word.numpy())
+        return _bayesian(x, word.numpy())
     else:
         raise NotImplementedError(
             "Weighted arctic iterated sums are not supported"

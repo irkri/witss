@@ -21,6 +21,21 @@ def test_base() -> None:
 
     np.testing.assert_allclose(actual, iss.iss(x, word))
 
+    actual = np.zeros((100, ))
+
+    for t in range(100):
+        for t_3 in range(t+1):
+            for t_2 in range(t_3):
+                for t_1 in range(t_2):
+                    actual[t] += (
+                        x[t_3, 0] * x[t_3, 1] ** (-1)
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                        / (t-1) / (t_3-1) / (t_2)
+                    )
+
+    np.testing.assert_allclose(actual, iss.iss(x, word, normalize=True))
+
 
 def test_partial() -> None:
     x = np.random.normal(size=(100, 3))
@@ -296,3 +311,7 @@ def test_cos_outer() -> None:
         ),
         rtol=1e-4,
     )
+
+
+if __name__ == "__main__":
+    test_base()

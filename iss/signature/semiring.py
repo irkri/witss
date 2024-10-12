@@ -25,6 +25,7 @@ class Arctic(Semiring):
 
 class Bayesian(Semiring):
     """The Bayesian semiring has ``max`` as additive operation and
-    standard multiplication as multiplicative operation.
+    standard multiplication as multiplicative operation. Only positive
+    real numbers are allowed.
     """
     ...

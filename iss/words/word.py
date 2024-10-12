@@ -15,6 +15,10 @@ class Word:
         if word is not None:
             self.multiply(word)
 
+    @property
+    def max_dim(self) -> int:
+        return max(l[0] for el in self._letters for l in el)
+
     def is_empty(self) -> bool:
         return len(self._letters) == 0
 
@@ -59,8 +63,7 @@ class Word:
             raise NotImplementedError
 
     def numpy(self) -> np.ndarray:
-        max_dim = max(l[0] for el in self._letters for l in el)
-        exps = np.zeros((len(self._letters), max_dim), dtype=np.int32)
+        exps = np.zeros((len(self._letters), self.max_dim), dtype=np.int32)
         for iel, el in enumerate(self._letters):
             for l in el:
                 exps[iel, l[0]-1] = l[1]
