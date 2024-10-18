@@ -4,10 +4,11 @@ from typing import Optional
 import numpy as np
 
 from ..words.word import Word
-from .compute import (_arctic, _bayesian, _cos_outer_reals, _cos_reals,
-                      _exp_outer_reals, _exp_reals, _partial_arctic,
-                      _partial_bayesian, _partial_exp_outer_reals,
-                      _partial_exp_reals, _partial_reals, _reals)
+from .compute import (_arctic, _partial_arctic_argmax, _bayesian, _cos_outer_reals,
+                      _cos_reals, _exp_outer_reals, _exp_reals,
+                      _partial_arctic, _partial_bayesian,
+                      _partial_exp_outer_reals, _partial_exp_reals,
+                      _partial_reals, _reals)
 from .semiring import Arctic, Bayesian, Reals, Semiring
 from .weighting import Cosine, Exponential, Weighting
 
@@ -72,7 +73,11 @@ def iss(
             normalize=normalize,
         )
     elif isinstance(semiring, Arctic):
-        result = _issA(x, word, partial=partial, weighting=weighting)
+        result = _issA(x, word,
+            partial=partial,
+            weighting=weighting,
+            indices=semiring.returns_indices,
+        )
     elif isinstance(semiring, Bayesian):
         result = _issB(x, word, partial=partial, weighting=weighting)
     else:
@@ -148,13 +153,34 @@ def _issR(
         raise NotImplementedError
 
 
+def split_argmax_output(
+    x: np.ndarray,
+    p: int,
+) -> tuple[np.ndarray, list[np.ndarray]]:
+    itsum = np.empty((p, x.shape[1]))
+    index = [np.empty((x.shape[1], k+1)) for k in range(p)]
+    for k in range(p):
+        j = int(k + (k * (k+1) / 2))
+        itsum[k, :] = x[j, :]
+        for c in range(k+1):
+            index[k][:, c] = x[j+c+1, :]
+    return itsum, index
+
+
 def _issA(
     x: np.ndarray,
     word: Word,
     partial: bool = False,
     weighting: Optional[Weighting] = None,
-) -> np.ndarray:
+    indices: bool = False,
+) -> np.ndarray | tuple[np.ndarray, list[np.ndarray]]:
     if weighting is None:
+        if indices:
+            array = _partial_arctic_argmax(x, word.numpy())
+            itsum, index = split_argmax_output(array, len(word))
+            if partial:
+                return itsum, index
+            return itsum[-1], [index[-1]]
         if partial:
             return _partial_arctic(x, word.numpy())
         return _arctic(x, word.numpy())

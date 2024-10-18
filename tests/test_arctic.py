@@ -58,3 +58,45 @@ def test_partial() -> None:
         actual,
         iss.iss(x, word, partial=True, semiring=iss.semiring.Arctic()),
     )
+
+
+def test_argmax() -> None:
+    x = np.array([
+        [1, 0, -4, 1, -4, 5],
+        [-4, -7, -3, -2, -5, -8],
+        [1, 2, 6, 2, 9, -2],
+    ]).swapaxes(0, 1)
+
+    array, indices = iss.iss(x, iss.Word("[1][2][3]"),
+        partial=True,
+        semiring=iss.semiring.Arctic(indices=True),
+    )
+    np.testing.assert_allclose(
+        array,
+        np.array([
+            [1, 1, 1, 1, 1, 5],
+            [-3, -3, -2, -1, -1, -1],
+            [-2, -1, 3, 3, 7, 8, 8],
+        ])
+    )
+    np.testing.assert_allclose(
+        indices[0],
+        np.array([[0], [0], [0], [0], [0], [5]])
+    )
+    np.testing.assert_allclose(
+        indices[1],
+        np.array([
+            [0., 0.], [0., 0.], [0., 2.], [0., 3.], [0., 3.], [0., 3.],
+        ])
+    )
+    np.testing.assert_allclose(
+        indices[2],
+        np.array([
+            [0., 0., 0.],
+            [0., 0., 1.],
+            [0., 2., 2.],
+            [0., 3., 3.],
+            [0., 3., 4.],
+            [0., 3., 4.],
+        ])
+    )

@@ -292,6 +292,45 @@ def _arctic(
     fastmath=True,
     cache=True,
 )
+def _partial_arctic_argmax(
+    Z: np.ndarray,
+    exps: np.ndarray,
+) -> np.ndarray:
+    result = np.zeros((2, len(exps), Z.shape[0]), dtype=np.float64)
+    tmp = np.zeros((Z.shape[0], ), dtype=np.float64)
+    for k, exp in enumerate(exps):
+        for i, e in enumerate(exp):
+            if e != 0:
+                tmp = tmp + (Z[:, i] * e)
+        result[0, k, 0] = tmp[0]
+        for t in range(1, Z.shape[0]):
+            if result[0, k, t-1] >= tmp[t]:
+                result[0, k, t] = result[0, k, t-1]
+                result[1, k, t] = result[1, k, t-1]
+            else:
+                result[0, k, t] = tmp[t]
+                result[1, k, t] = t
+        if k < len(exps) - 1:
+            tmp = cummax(tmp)
+    # translate indices back to their actual position
+    n = int(len(exps) + (len(exps) * (len(exps)+1) / 2))
+    translated_results = np.zeros((n, Z.shape[0]), dtype=np.float64)
+    for k in range(len(exps)-1, -1, -1):
+        index = int(k + (k * (k+1) / 2))
+        translated_results[index] = result[0, k]
+        translated_results[index+k+1] = result[1, k]
+        for s in range(k, 0, -1):
+            c = int(translated_results[index+s+1, -1])+1
+            translated_results[index+s, :c] = result[1, (s-1), :c]
+            translated_results[index+s, c:] = result[1, (s-1), c-1]
+    return translated_results
+
+
+@numba.njit(
+    "f8[:,:](f8[:,:], i4[:,:])",
+    fastmath=True,
+    cache=True,
+)
 def _partial_arctic(
     Z: np.ndarray,
     exps: np.ndarray,

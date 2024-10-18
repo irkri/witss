@@ -22,6 +22,13 @@ class Arctic(Semiring):
     """
     ...
 
+    def __init__(self, indices: bool = False) -> None:
+        self._indices = indices
+
+    @property
+    def returns_indices(self) -> bool:
+        return self._indices
+
 
 class Bayesian(Semiring):
     """The Bayesian semiring has ``max`` as additive operation and
