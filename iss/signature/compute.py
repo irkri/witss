@@ -292,38 +292,62 @@ def _arctic(
     fastmath=True,
     cache=True,
 )
+def _arctic_argmax(
+    Z: np.ndarray,
+    exps: np.ndarray,
+) -> np.ndarray:
+    result = np.zeros((1, Z.shape[0]), dtype=np.float64)
+    indices = np.zeros((len(exps), Z.shape[0]), dtype=np.int32)
+    for k, exp in enumerate(exps):
+        for i, e in enumerate(exp):
+            if e != 0:
+                result[0, :] = result[0, :] + (Z[:, i] * e)
+        for t in range(Z.shape[0]-1):
+            if result[0, t+1] < result[0, t]:
+                result[0, t+1] = result[0, t]
+                indices[k, t+1] = indices[k, t]
+            else:
+                indices[k, t+1] = t+1
+    for s in range(len(exps)-1, 0, -1):
+        indices[s-1, :] = indices[s-1, indices[s]]
+    return np.concatenate((result, indices))
+
+
+@numba.njit(
+    "f8[:,:](f8[:,:], i4[:,:])",
+    fastmath=True,
+    cache=True,
+)
 def _partial_arctic_argmax(
     Z: np.ndarray,
     exps: np.ndarray,
 ) -> np.ndarray:
-    result = np.zeros((2, len(exps), Z.shape[0]), dtype=np.float64)
-    tmp = np.zeros((Z.shape[0], ), dtype=np.float64)
+    result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
+    indices = np.zeros(
+        (int((len(exps) * (len(exps)+1)/2)), Z.shape[0]),
+        dtype=np.int32,
+    )
     for k, exp in enumerate(exps):
+        if k > 0:
+            result[k] = result[k-1]
         for i, e in enumerate(exp):
             if e != 0:
-                tmp = tmp + (Z[:, i] * e)
-        result[0, k, 0] = tmp[0]
-        for t in range(1, Z.shape[0]):
-            if result[0, k, t-1] >= tmp[t]:
-                result[0, k, t] = result[0, k, t-1]
-                result[1, k, t] = result[1, k, t-1]
+                result[k] = result[k] + (Z[:, i] * e)
+        for t in range(Z.shape[0]-1):
+            if result[k, t+1] < result[k, t]:
+                result[k, t+1] = result[k, t]
+                for l in range(k, len(exps)):
+                    c = int(l*(l+1)/2)+k
+                    indices[c, t+1] = indices[c, t]
             else:
-                result[0, k, t] = tmp[t]
-                result[1, k, t] = t
-        if k < len(exps) - 1:
-            tmp = cummax(tmp)
-    # translate indices back to their actual position
-    n = int(len(exps) + (len(exps) * (len(exps)+1) / 2))
-    translated_results = np.zeros((n, Z.shape[0]), dtype=np.float64)
+                for l in range(len(exps)-1, k-1, -1):
+                    c = int(l*(l+1)/2)+k
+                    indices[c, t+1] = t+1
     for k in range(len(exps)-1, -1, -1):
-        index = int(k + (k * (k+1) / 2))
-        translated_results[index] = result[0, k]
-        translated_results[index+k+1] = result[1, k]
+        index = int(k * (k+1) / 2)
         for s in range(k, 0, -1):
-            c = int(translated_results[index+s+1, -1])+1
-            translated_results[index+s, :c] = result[1, (s-1), :c]
-            translated_results[index+s, c:] = result[1, (s-1), c-1]
-    return translated_results
+            indices[index+s-1, :] = indices[index+s-1, indices[index+s]]
+    return np.concatenate((result, indices))
 
 
 @numba.njit(

@@ -8,7 +8,7 @@ from .compute import (_arctic, _partial_arctic_argmax, _bayesian, _cos_outer_rea
                       _cos_reals, _exp_outer_reals, _exp_reals,
                       _partial_arctic, _partial_bayesian,
                       _partial_exp_outer_reals, _partial_exp_reals,
-                      _partial_reals, _reals)
+                      _partial_reals, _reals, _arctic_argmax)
 from .semiring import Arctic, Bayesian, Reals, Semiring
 from .weighting import Cosine, Exponential, Weighting
 
@@ -156,14 +156,16 @@ def _issR(
 def split_argmax_output(
     x: np.ndarray,
     p: int,
-) -> tuple[np.ndarray, list[np.ndarray]]:
-    itsum = np.empty((p, x.shape[1]))
-    index = [np.empty((x.shape[1], k+1)) for k in range(p)]
+) -> tuple[np.ndarray, tuple[np.ndarray, ...]]:
+    print(x)
+    itsum = x[:p, :]
+    index = tuple(
+        np.empty((x.shape[1], k+1), dtype=np.int32) for k in range(p)
+    )
     for k in range(p):
-        j = int(k + (k * (k+1) / 2))
-        itsum[k, :] = x[j, :]
+        j = int((k * (k+1) / 2))
         for c in range(k+1):
-            index[k][:, c] = x[j+c+1, :]
+            index[k][:, c] = x[p+j+c, :]
     return itsum, index
 
 
@@ -173,14 +175,15 @@ def _issA(
     partial: bool = False,
     weighting: Optional[Weighting] = None,
     indices: bool = False,
-) -> np.ndarray | tuple[np.ndarray, list[np.ndarray]]:
+) -> np.ndarray | tuple[np.ndarray, tuple[np.ndarray, ...]]:
     if weighting is None:
         if indices:
-            array = _partial_arctic_argmax(x, word.numpy())
-            itsum, index = split_argmax_output(array, len(word))
             if partial:
+                array = _partial_arctic_argmax(x, word.numpy())
+                itsum, index = split_argmax_output(array, len(word))
                 return itsum, index
-            return itsum[-1], [index[-1]]
+            array = _arctic_argmax(x, word.numpy())
+            return array[0], (array[1:].astype(np.int32).swapaxes(0, 1), )
         if partial:
             return _partial_arctic(x, word.numpy())
         return _arctic(x, word.numpy())
