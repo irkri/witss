@@ -6,7 +6,7 @@ import numpy as np
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:], boolean)",
+    "f8[:](f8[:,:], i4[:,:], boolean, boolean)",
     fastmath=True,
     cache=True,
 )
@@ -14,6 +14,7 @@ def _reals(
     Z: np.ndarray,
     exps: np.ndarray,
     norm: bool,
+    strict: bool,
 ) -> np.ndarray:
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
     if norm:
@@ -23,23 +24,19 @@ def _reals(
             if e != 0:
                 tmp = tmp * (Z[:, i] ** e)
         tmp = np.cumsum(tmp)
-        if k < len(exps) - 1:
+        if norm:
+            if k == 0 or not strict:
+                tmp = tmp / div  # type: ignore
+            else:
+                tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
+        if strict and k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
             tmp[0] = 0
-            if norm:
-                tmp[k+1:] = tmp[k+1:] / div[:-(k+1)] # type: ignore
-    if norm:
-        if len(exps) > 1:
-            tmp[len(exps)-1:] = (
-                tmp[len(exps)-1:] / div[:-len(exps)+1] # type: ignore
-            )
-        else:
-            tmp = tmp / div # type: ignore
     return tmp
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:], boolean)",
+    "f8[:,:](f8[:,:], i4[:,:], boolean, boolean)",
     fastmath=True,
     cache=True,
 )
@@ -47,6 +44,7 @@ def _partial_reals(
     Z: np.ndarray,
     exps: np.ndarray,
     norm: bool,
+    strict: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
@@ -58,9 +56,12 @@ def _partial_reals(
                 tmp = tmp * (Z[:, i] ** e)
         tmp = np.cumsum(tmp)
         if norm:
-            tmp = tmp / div
+            if k == 0 or not strict:
+                tmp = tmp / div  # type: ignore
+            else:
+                tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
         result[k] = tmp
-        if k < len(exps) - 1:
+        if strict and k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
             tmp[0] = 0
     return result
@@ -270,13 +271,14 @@ def cummax(x):
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:])",
+    "f8[:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _arctic(
     Z: np.ndarray,
     exps: np.ndarray,
+    strict: bool,
 ) -> np.ndarray:
     tmp = np.zeros((Z.shape[0], ), dtype=np.float64)
     for k, exp in enumerate(exps):
@@ -284,17 +286,21 @@ def _arctic(
             if e != 0:
                 tmp = tmp + (Z[:, i] * e)
         tmp = cummax(tmp)
+        if strict and k < len(exps) - 1:
+            tmp = np.roll(tmp, 1)
+            tmp[0] = - np.inf
     return tmp
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:])",
+    "f8[:,:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _arctic_argmax(
     Z: np.ndarray,
     exps: np.ndarray,
+    strict: bool,
 ) -> np.ndarray:
     result = np.zeros((1, Z.shape[0]), dtype=np.float64)
     indices = np.zeros((len(exps), Z.shape[0]), dtype=np.int32)
@@ -308,19 +314,25 @@ def _arctic_argmax(
                 indices[k, t+1] = indices[k, t]
             else:
                 indices[k, t+1] = t+1
+        if strict and k < len(exps) - 1:
+            result[0, :] = np.roll(result[0, :], 1)
+            result[0, 0] = - np.inf
+            indices[k, :] = np.roll(indices[k, :], 1)
+            indices[k, 0] = 0
     for s in range(len(exps)-1, 0, -1):
         indices[s-1, :] = indices[s-1, indices[s]]
     return np.concatenate((result, indices))
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:])",
+    "f8[:,:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _partial_arctic_argmax(
     Z: np.ndarray,
     exps: np.ndarray,
+    strict: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     indices = np.zeros(
@@ -329,7 +341,15 @@ def _partial_arctic_argmax(
     )
     for k, exp in enumerate(exps):
         if k > 0:
-            result[k] = result[k-1]
+            if strict:
+                result[k] = np.roll(result[k-1], 1)
+                result[k, 0] = - np.inf
+                for l in range(k, len(exps)):
+                    c = int(l*(l+1)/2)+k
+                    indices[c, :] = np.roll(indices[c, :], 1)
+                    indices[c, 0] = 0
+            else:
+                result[k] = result[k-1]
         for i, e in enumerate(exp):
             if e != 0:
                 result[k] = result[k] + (Z[:, i] * e)
@@ -351,13 +371,14 @@ def _partial_arctic_argmax(
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:])",
+    "f8[:,:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _partial_arctic(
     Z: np.ndarray,
     exps: np.ndarray,
+    strict: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     tmp = np.zeros((Z.shape[0], ), dtype=np.float64)
@@ -367,6 +388,9 @@ def _partial_arctic(
                 tmp = tmp + (Z[:, i] * e)
         tmp = cummax(tmp)
         result[k] = tmp
+        if strict and k < len(exps) - 1:
+            tmp = np.roll(tmp, 1)
+            tmp[0] = - np.inf
     return result
 
 
@@ -374,13 +398,14 @@ def _partial_arctic(
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:])",
+    "f8[:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _bayesian(
     Z: np.ndarray,
     exps: np.ndarray,
+    strict: bool,
 ) -> np.ndarray:
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
     for k, exp in enumerate(exps):
@@ -388,17 +413,21 @@ def _bayesian(
             if e != 0:
                 tmp = tmp * (Z[:, i] ** e)
         tmp = cummax(tmp)
+        if strict and k < len(exps) - 1:
+            tmp = np.roll(tmp, 1)
+            tmp[0] = - np.inf
     return tmp
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:])",
+    "f8[:,:](f8[:,:], i4[:,:], boolean)",
     fastmath=True,
     cache=True,
 )
 def _partial_bayesian(
     Z: np.ndarray,
     exps: np.ndarray,
+    strict: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
@@ -408,4 +437,7 @@ def _partial_bayesian(
                 tmp = tmp * (Z[:, i] ** e)
         tmp = cummax(tmp)
         result[k] = tmp
+        if strict and k < len(exps) - 1:
+            tmp = np.roll(tmp, 1)
+            tmp[0] = - np.inf
     return result

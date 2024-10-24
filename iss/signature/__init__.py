@@ -1,1 +1,1 @@
-from .base import iss
+from .base import cumargmax, iss

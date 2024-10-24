@@ -83,6 +83,15 @@ class Word:
             )
         return pairs
 
+    def prefixes(self) -> list[Self]:
+        """Returns all prefixes of this Word, including the Word itself.
+        They are ordered by length, from smallest to largest prefix.
+        """
+        prefixes = []
+        for i in range(len(self._letters)):
+            prefixes.append(Word() * self._letters[:i+1])
+        return prefixes
+
     def copy(self) -> Self:
         return Word() * self
 
@@ -139,3 +148,18 @@ class Word:
 
     def __repr__(self) -> str:
         return f"Word({str(self)})"
+
+
+class BagOfWords:
+    """A bag of words contains a collection of Word class instances. It
+    is used to speed up calculation of iterated sums evaluated on a lot
+    of words in which some prefix words may overlap.
+    """
+
+    def __init__(self, *words: Word) -> None:
+        self._words = [*words]
+
+    def join(self, other: Self | Word) -> Self:
+        if isinstance(other, Word):
+            return BagOfWords(*self._words, other)
+        return BagOfWords(*self._words, *other._words)

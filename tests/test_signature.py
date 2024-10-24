@@ -25,6 +25,20 @@ def test_base() -> None:
 
     for t in range(100):
         for t_3 in range(t+1):
+            for t_2 in range(t_3+1):
+                for t_1 in range(t_2+1):
+                    actual[t] += (
+                          x[t_3, 0] * x[t_3, 1] ** (-1)
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                    )
+
+    np.testing.assert_allclose(actual, iss.iss(x, word, strict=False))
+
+    actual = np.zeros((100, ))
+
+    for t in range(100):
+        for t_3 in range(t+1):
             for t_2 in range(t_3):
                 for t_1 in range(t_2):
                     actual[t] += (
@@ -35,6 +49,24 @@ def test_base() -> None:
                     )
 
     np.testing.assert_allclose(actual, iss.iss(x, word, normalize=True))
+
+    actual = np.zeros((100, ))
+
+    for t in range(100):
+        for t_3 in range(t+1):
+            for t_2 in range(t_3+1):
+                for t_1 in range(t_2+1):
+                    actual[t] += (
+                        x[t_3, 0] * x[t_3, 1] ** (-1)
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                        / (t+1) / (t_3+1) / (t_2+1)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(x, word, normalize=True, strict=False),
+    )
 
 
 def test_partial() -> None:
@@ -60,7 +92,85 @@ def test_partial() -> None:
                         * x[t_1, 0] * x[t_1, 1] ** 3
                     )
 
-    np.testing.assert_allclose(actual, iss.iss(x, word, partial=True))
+    np.testing.assert_allclose(actual, iss.iss(x, word, partial=True).numpy())
+
+    actual = np.zeros((3, 100))
+
+    for t in range(100):
+        for t_3 in range(t+1):
+            actual[0, t] += (
+                x[t_3, 0] * x[t_3, 1] ** 3
+                / (t+1)
+            )
+            for t_2 in range(t_3):
+                actual[1, t] += (
+                    x[t_2, 0] * x[t_2, 1] ** 3
+                    * x[t_3, 1] * x[t_3, 2]
+                    / (t) / (t_3)
+                )
+                for t_1 in range(t_2):
+                    actual[2, t] += (
+                          x[t_3, 0] * x[t_3, 1]
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                        / (t-1) / (t_3-1) / (t_2)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(x, word, partial=True, normalize=True).numpy(),
+    )
+
+    actual = np.zeros((3, 100))
+
+    for t in range(100):
+        for t_3 in range(t+1):
+            actual[0, t] += (
+                x[t_3, 0] * x[t_3, 1] ** 3
+            )
+            for t_2 in range(t_3+1):
+                actual[1, t] += (
+                    x[t_2, 0] * x[t_2, 1] ** 3
+                    * x[t_3, 1] * x[t_3, 2]
+                )
+                for t_1 in range(t_2+1):
+                    actual[2, t] += (
+                          x[t_3, 0] * x[t_3, 1]
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(x, word, partial=True, strict=False).numpy(),
+    )
+
+    actual = np.zeros((3, 100))
+
+    for t in range(100):
+        for t_3 in range(t+1):
+            actual[0, t] += (
+                x[t_3, 0] * x[t_3, 1] ** 3
+                / (t+1)
+            )
+            for t_2 in range(t_3+1):
+                actual[1, t] += (
+                    x[t_2, 0] * x[t_2, 1] ** 3
+                    * x[t_3, 1] * x[t_3, 2]
+                    / (t+1) / (t_3+1)
+                )
+                for t_1 in range(t_2+1):
+                    actual[2, t] += (
+                          x[t_3, 0] * x[t_3, 1]
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                        / (t+1) / (t_3+1) / (t_2+1)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        iss.iss(x, word, partial=True, strict=False, normalize=True).numpy(),
+    )
 
 
 def test_exp() -> None:
@@ -155,7 +265,7 @@ def test_partial_exp() -> None:
             x, word,
             partial=True,
             weighting=iss.weighting.Exponential(alpha, outer=False),
-        ),
+        ).numpy(),
     )
 
 
@@ -195,7 +305,7 @@ def test_partial_outer_exp() -> None:
             x, word,
             partial=True,
             weighting=iss.weighting.Exponential(alpha),
-        ),
+        ).numpy(),
     )
 
 
@@ -314,4 +424,4 @@ def test_cos_outer() -> None:
 
 
 if __name__ == "__main__":
-    test_base()
+    test_partial()
