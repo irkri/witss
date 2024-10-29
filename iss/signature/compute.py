@@ -68,7 +68,7 @@ def _partial_reals(
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:], f8[:], f8[:])",
+    "f8[:](f8[:,:], i4[:,:], f8[:], f8[:], boolean)",
     fastmath=True,
     cache=True,
 )
@@ -77,8 +77,11 @@ def _exp_reals(
     exps: np.ndarray,
     alpha: np.ndarray,
     time: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, Z.shape[0]+1)
     for k, exp in enumerate(exps):
         for i, e in enumerate(exp):
             if e != 0:
@@ -88,6 +91,11 @@ def _exp_reals(
         if k < len(exps) - 1:
             tmp = tmp * np.exp(alpha[k] * time)
         tmp = np.cumsum(tmp)
+        if norm:
+            if k == 0:
+                tmp = tmp / div  # type: ignore
+            else:
+                tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
         if k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
             tmp[0] = 0
@@ -95,7 +103,7 @@ def _exp_reals(
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:], f8[:], f8[:])",
+    "f8[:](f8[:,:], i4[:,:], f8[:], f8[:], boolean)",
     fastmath=True,
     cache=True,
 )
@@ -104,8 +112,11 @@ def _exp_outer_reals(
     exps: np.ndarray,
     alpha: np.ndarray,
     time: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, Z.shape[0]+1)
     for k, exp in enumerate(exps):
         for i, e in enumerate(exp):
             if e != 0:
@@ -114,6 +125,11 @@ def _exp_outer_reals(
             tmp = tmp * np.exp(-alpha[k-1] * time)
         tmp = tmp * np.exp(alpha[k] * time)
         tmp = np.cumsum(tmp)
+        if norm:
+            if k == 0:
+                tmp = tmp / div  # type: ignore
+            else:
+                tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
         if k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
             tmp[0] = 0
@@ -122,7 +138,7 @@ def _exp_outer_reals(
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:], f8[:], f8[:])",
+    "f8[:,:](f8[:,:], i4[:,:], f8[:], f8[:], boolean)",
     fastmath=True,
     cache=True,
 )
@@ -131,9 +147,12 @@ def _partial_exp_reals(
     exps: np.ndarray,
     alpha: np.ndarray,
     time: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, Z.shape[0]+1)
     for k, exp in enumerate(exps):
         for i, e in enumerate(exp):
             if e != 0:
@@ -141,17 +160,26 @@ def _partial_exp_reals(
         if k > 0:
             tmp = tmp * np.exp(-alpha[k-1] * time)
         result[k, :] = np.cumsum(tmp)
+        if norm:
+            if k == 0:
+                result[k] = result[k] / div  # type: ignore
+            else:
+                result[k, k:] = result[k, k:] / div[:-k]  # type: ignore
         if k < len(exps) - 1:
             tmp = tmp * np.exp(alpha[k] * time)
-        tmp = np.cumsum(tmp)
-        if k < len(exps) - 1:
+            tmp = np.cumsum(tmp)
+            if norm:
+                if k == 0:
+                    tmp = tmp / div  # type: ignore
+                else:
+                    tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
             tmp = np.roll(tmp, 1)
             tmp[0] = 0
     return result
 
 
 @numba.njit(
-    "f8[:,:](f8[:,:], i4[:,:], f8[:], f8[:])",
+    "f8[:,:](f8[:,:], i4[:,:], f8[:], f8[:], boolean)",
     fastmath=True,
     cache=True,
 )
@@ -160,9 +188,12 @@ def _partial_exp_outer_reals(
     exps: np.ndarray,
     alpha: np.ndarray,
     time: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     result = np.zeros((len(exps), Z.shape[0]), dtype=np.float64)
     tmp = np.ones((Z.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, Z.shape[0]+1)
     for k, exp in enumerate(exps):
         for i, e in enumerate(exp):
             if e != 0:
@@ -171,6 +202,11 @@ def _partial_exp_outer_reals(
             tmp = tmp * np.exp(-alpha[k-1] * time)
         tmp = tmp * np.exp(alpha[k] * time)
         tmp = np.cumsum(tmp)
+        if norm:
+            if k == 0:
+                tmp = tmp / div  # type: ignore
+            else:
+                tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
         result[k, :] = tmp * np.exp(-alpha[k] * time)
         if k < len(exps) - 1:
             tmp = np.roll(tmp, 1)
@@ -179,7 +215,7 @@ def _partial_exp_outer_reals(
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:], f8[:], i4[:,:], f8[:])",
+    "f8[:](f8[:,:], i4[:,:], f8[:], i4[:,:], f8[:], boolean)",
     fastmath=True,
     cache=True,
 )
@@ -189,8 +225,11 @@ def _cos_reals(
     alpha: np.ndarray,
     expansion: np.ndarray,
     time: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     result = np.zeros((X.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, X.shape[0]+1)
     for s in range(expansion.shape[0]):
         tmp = np.ones((X.shape[0], ), dtype=np.float64)
         for k, exp in enumerate(exps):
@@ -208,6 +247,11 @@ def _cos_reals(
                 tmp = tmp * (np.sin(alpha[k] * time) ** expansion[s, 4*k+1])
                 tmp = tmp * (np.cos(alpha[k] * time) ** expansion[s, 4*k+2])
             tmp = np.cumsum(tmp)
+            if norm:
+                if k == 0:
+                    tmp = tmp / div  # type: ignore
+                else:
+                    tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
             if k < len(exps) - 1:
                 tmp = np.roll(tmp, 1)
                 tmp[0] = 0
@@ -216,7 +260,7 @@ def _cos_reals(
 
 
 @numba.njit(
-    "f8[:](f8[:,:], i4[:,:], f8[:], i4[:,:], f8[:])",
+    "f8[:](f8[:,:], i4[:,:], f8[:], i4[:,:], f8[:], boolean)",
     fastmath=True,
     cache=True,
 )
@@ -226,8 +270,11 @@ def _cos_outer_reals(
     alpha: np.ndarray,
     expansion: np.ndarray,
     time: np.ndarray,
+    norm: bool,
 ) -> np.ndarray:
     result = np.zeros((X.shape[0], ), dtype=np.float64)
+    if norm:
+        div = np.arange(1, X.shape[0]+1)
     for s in range(expansion.shape[0]):
         tmp = np.ones((X.shape[0], ), dtype=np.float64)
         for k, exp in enumerate(exps):
@@ -244,6 +291,11 @@ def _cos_outer_reals(
             tmp = tmp * (np.sin(alpha[k] * time) ** expansion[s, 4*k+1])
             tmp = tmp * (np.cos(alpha[k] * time) ** expansion[s, 4*k+2])
             tmp = np.cumsum(tmp)
+            if norm:
+                if k == 0:
+                    tmp = tmp / div  # type: ignore
+                else:
+                    tmp[k:] = tmp[k:] / div[:-k]  # type: ignore
             if k < len(exps) - 1:
                 tmp = np.roll(tmp, 1)
                 tmp[0] = 0

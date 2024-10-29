@@ -1,2 +1,2 @@
 from .signature import cumargmax, iss, semiring, weighting
-from .words import Word
+from .words import BagOfWords, Word

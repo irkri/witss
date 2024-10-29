@@ -1,5 +1,6 @@
 import re
 from typing import Optional, Self
+import warnings
 
 import numpy as np
 
@@ -107,6 +108,12 @@ class Word:
         new_word.multiply(self)
         return new_word
 
+    def __contains__(self, other: Self) -> bool:
+        for i in range(len(self)):
+            if other._letters == self._letters[:i]:
+                return True
+        return False
+
     def __eq__(self, word: Self) -> bool:
         if not isinstance(word, (Word, str, list)):
             raise NotImplementedError(
@@ -151,15 +158,66 @@ class Word:
 
 
 class BagOfWords:
-    """A bag of words contains a collection of Word class instances. It
+    """A BagOfWords contains a collection of Word class instances. It
     is used to speed up calculation of iterated sums evaluated on a lot
-    of words in which some prefix words may overlap.
+    of words in which some prefix words may overlap. Processing all
+    words is done once at initialization of a BagOfWords and takes time
+    proportional to the number of words inside squared.
     """
 
-    def __init__(self, *words: Word) -> None:
-        self._words = [*words]
+    def __init__(self, *words: Word | str) -> None:
+        self._words = [
+            word if isinstance(word, Word) else Word(word)
+            for word in words
+        ]
+        self.process()
+
+    def process(self) -> None:
+        self._words = sorted(self._words, key=lambda x: len(x), reverse=True)
+        words_r = self._words[::-1]
+        references: list[None | tuple[int, int]] = []
+        partial_flag = [False for _ in range(len(self._words))]
+        for word in words_r:
+            for j, larger_word in enumerate(self._words):
+                if word in larger_word and word != larger_word:
+                    references.append((j, len(word)))
+                    partial_flag[j] = True
+                    break
+            else:
+                references.append(None)
+        self._references = references[::-1]
+        self._partial_flags = partial_flag
 
     def join(self, other: Self | Word) -> Self:
         if isinstance(other, Word):
             return BagOfWords(*self._words, other)
         return BagOfWords(*self._words, *other._words)
+
+    def words(self) -> list[Word]:
+        return self._words
+
+    def __getitem__(self, index: int) -> tuple[Word, bool | tuple[int, int]]:
+        ref = self._references[index]
+        return (
+            self._words[index],
+            ref if ref is not None
+                else self._partial_flags[index],
+        )
+
+    def __len__(self) -> int:
+        return len(self._words)
+
+    def __iter__(self) -> Self:
+        self._i = -1
+        return self
+
+    def __next__(self) -> tuple[Word, bool | tuple[int, int]]:
+        self._i += 1
+        if self._i == len(self):
+            raise StopIteration
+        ref = self._references[self._i]
+        return (
+            self._words[self._i],
+            ref if ref is not None
+                else self._partial_flags[self._i],
+        )

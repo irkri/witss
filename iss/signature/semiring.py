@@ -12,8 +12,20 @@ class Semiring:
 class Reals(Semiring):
     """The semiring of real numbers with default addition and
     multiplication is the standard space of the ISS.
+
+    Args:
+        normalize (bool, optional): If set to true, normalizes the
+            iterated sums by normalizing each cumulative sum. This
+            normalization leads to computing averages instead of sums.
+            Normalization often prevents overflow. Defaults to False.
     """
-    ...
+
+    def __init__(self, normalize: bool = False) -> None:
+        self._normalize = normalize
+
+    @property
+    def normalized(self) -> bool:
+        return self._normalize
 
 
 class Arctic(Semiring):

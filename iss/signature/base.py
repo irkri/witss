@@ -36,10 +36,10 @@ class ISS:
 @overload
 def iss(
     x: np.ndarray,
-    word: BagOfWords | Sequence[Word] | Sequence[str],
-    partial: bool = ...,
+    word: BagOfWords | Sequence[Word | str],
+    partial: Literal[False] = ...,
     weighting: Optional[Weighting] = ...,
-    semiring: Semiring = ...,
+    semiring: Optional[Semiring] = ...,
     strict: Optional[bool] = ...,
     normalize: bool = ...,
 ) -> ISS:
@@ -50,7 +50,7 @@ def iss(
     word: Word | str,
     partial: Literal[False] = ...,
     weighting: Optional[Weighting] = ...,
-    semiring: Semiring = ...,
+    semiring: Optional[Semiring] = ...,
     strict: Optional[bool] = ...,
     normalize: bool = ...,
 ) -> np.ndarray:
@@ -61,19 +61,19 @@ def iss(
     word: Word | str,
     partial: Literal[True] = ...,
     weighting: Optional[Weighting] = ...,
-    semiring: Semiring = ...,
+    semiring: Optional[Semiring] = ...,
     strict: Optional[bool] = ...,
     normalize: bool = ...,
 ) -> ISS:
     ...
 def iss(
     x: np.ndarray,
-    word: BagOfWords | Word | str | Sequence[Word] | Sequence[str],
+    word: BagOfWords | Word | str | Sequence[Word | str],
     partial: bool = False,
     weighting: Optional[Weighting] = None,
-    semiring: Semiring = Reals(),
+    semiring: Optional[Semiring] = None,
     strict: Optional[bool] = None,
-    normalize: bool = False,
+    normalize: Optional[bool] = None,
 ) -> np.ndarray | ISS:
     """Calculate the iterated sums signature of the given time series
     evaluated at the given word.
@@ -82,8 +82,8 @@ def iss(
         x (np.ndarray): Input array of 2 dimensions ``(T, d)`` where
             ``T`` is the sequence length and ``d`` the dimension of each
             time step.
-        word (BagOfWords | Word | str): The word the signature should be
-            evaluated on.
+        word (BagOfWords | Word | str | Sequence of Word or str): The
+            word the signature should be evaluated on.
         partial (bool): If True, also evaluates the signature for
             all prefix words of the given word, e.g. if
             ``word=[1][2][3]``, the method also returns the signature
@@ -97,25 +97,40 @@ def iss(
         strict (bool, optional): Whether to use strict inequalities for
             the time steps of the iterated sum. Defaults to True for the
             Real semiring and False for every other semiring.
-        normalize (bool, optional): If True, normalizes the iterated sum
-            for the real semiring by normalizing each cumulative sum.
-            This prevents overflow. Defaults to False.
+        normalize (bool, optional): This is a convenience argument that
+            typically is defined in the Reals semiring. It only gets
+            processed if a semiring is not specified. Defaults to None.
     """
+    if semiring is None:
+        if normalize is not None:
+            semiring = Reals(normalize)
+        else:
+            semiring = Reals()
     if isinstance(word, (Word, str)):
         word = Word(word) if not isinstance(word, Word) else word
         if not partial:
             return _iss_single(
-                x, word, partial, weighting, semiring, strict, normalize
+                x, word, partial, weighting, semiring, strict
             )
         array = _iss_single(
-            x, word, partial, weighting, semiring, strict, normalize
+            x, word, partial, weighting, semiring, strict
         )
         return ISS(word.prefixes(), [array[i] for i in range(len(array))])
 
-    raise NotImplementedError
-    words = BagOfWords()
+    if not isinstance(word, BagOfWords):
+        word = BagOfWords(*word)
+    itsums = []
     for w in word:
-        words = words.join(Word(w) if isinstance(w, str) else w)
+        if isinstance(w[1], tuple):
+            itsums.append(itsums[w[1][0]][w[0]].copy())
+        else:
+            itsums.append(
+                iss(x, w[0], w[1], weighting, semiring, strict)  # type: ignore
+            )
+    for i in range(len(itsums)):
+        if isinstance(itsums[i], ISS):
+            itsums[i] = itsums[i][word[i][0]]
+    return ISS(word.words(), itsums)
 
 
 def _iss_single(
@@ -125,7 +140,6 @@ def _iss_single(
     weighting: Optional[Weighting] = None,
     semiring: Semiring = Reals(),
     strict: Optional[bool] = None,
-    normalize: bool = False,
 ) -> np.ndarray:
     if not isinstance(x, np.ndarray):
         x = np.array(x)
@@ -149,7 +163,6 @@ def _iss_single(
                 weighting=weighting,
                 semiring=semiring,
                 strict=strict,
-                normalize=normalize,
             )
         return y
     if x.ndim > 3:
@@ -160,7 +173,7 @@ def _iss_single(
             partial=partial,
             weighting=weighting,
             strict=True if strict is None else strict,
-            normalize=normalize,
+            normalize=semiring.normalized,
         )
     elif isinstance(semiring, Arctic):
         result = _issA(x, word,
@@ -206,12 +219,14 @@ def _issR(
                     word.numpy(),
                     weighting.alpha,
                     weighting.time(x.shape[0]),
+                    normalize,
                 )
             return _partial_exp_reals(
                 x,
                 word.numpy(),
                 weighting.alpha,
                 weighting.time(x.shape[0]),
+                normalize,
             )
         if weighting.outer:
             return _exp_outer_reals(
@@ -219,12 +234,14 @@ def _issR(
                 word.numpy(),
                 weighting.alpha,
                 weighting.time(x.shape[0]),
+                normalize,
             )
         return _exp_reals(
             x,
             word.numpy(),
             weighting.alpha,
             weighting.time(x.shape[0]),
+            normalize,
         )
     elif isinstance(weighting, Cosine):
         if partial:
@@ -237,12 +254,14 @@ def _issR(
                 alpha=weighting.alpha,
                 expansion=weighting.expansion(word),
                 time=weighting.time(x.shape[0]),
+                norm=normalize,
             )
         return _cos_reals(
             x, word.numpy(),
             alpha=weighting.alpha,
             expansion=weighting.expansion(word),
             time=weighting.time(x.shape[0]),
+            norm=normalize,
         )
     else:
         raise NotImplementedError
