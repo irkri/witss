@@ -1,5 +1,6 @@
 import warnings
 from collections import OrderedDict
+from math import ceil
 from typing import Literal, Optional, Sequence, overload
 
 import numpy as np
@@ -37,6 +38,7 @@ class ISS:
 def iss(
     x: np.ndarray,
     word: BagOfWords | Sequence[Word | str],
+    batches: int = 1,
     partial: Literal[False] = ...,
     weighting: Optional[Weighting] = ...,
     semiring: Optional[Semiring] = ...,
@@ -48,6 +50,7 @@ def iss(
 def iss(
     x: np.ndarray,
     word: Word | str,
+    batches: int = 1,
     partial: Literal[False] = ...,
     weighting: Optional[Weighting] = ...,
     semiring: Optional[Semiring] = ...,
@@ -59,6 +62,7 @@ def iss(
 def iss(
     x: np.ndarray,
     word: Word | str,
+    batches: int = 1,
     partial: Literal[True] = ...,
     weighting: Optional[Weighting] = ...,
     semiring: Optional[Semiring] = ...,
@@ -69,6 +73,7 @@ def iss(
 def iss(
     x: np.ndarray,
     word: BagOfWords | Word | str | Sequence[Word | str],
+    batches: int = 1,
     partial: bool = False,
     weighting: Optional[Weighting] = None,
     semiring: Optional[Semiring] = None,
@@ -79,13 +84,20 @@ def iss(
     evaluated at the given word.
 
     Args:
-        x (np.ndarray): Input array of 2 dimensions ``(T, d)`` where
-            ``T`` is the sequence length and ``d`` the dimension of each
-            time step.
+        x (np.ndarray): Input array of at most 3 dimensions
+            ``(N, T, D)`` where ``N`` is the number of given time
+            series, ``T`` is the sequence length and ``D`` is the
+            dimension of each time step. A 2D array is interpreted as
+            having shape ``(T, D)`` and a 1D array having shape
+            ``(T, )``.
         word (BagOfWords | Word | str | Sequence of Word or str): The
             word the signature should be evaluated on.
-        partial (bool): If True, also evaluates the signature for
-            all prefix words of the given word, e.g. if
+        batches (int, optional): Computes the input in batches of the
+            given size. Time series in one batch are processed in
+            parallel. Only works if the input time series has three
+            dimensions. Defaults to 1.
+        partial (bool, optional): If True, also evaluates the signature
+            for all prefix words of the given word, e.g. if
             ``word=[1][2][3]``, the method also returns the signature
             for ``word=[1]`` and ``word=[1][2]``. Defaults to False.
         weighting (Weighting, optional): Weighting for the iterated sum
@@ -100,6 +112,13 @@ def iss(
         normalize (bool, optional): This is a convenience argument that
             typically is defined in the Reals semiring. It only gets
             processed if a semiring is not specified. Defaults to None.
+
+    Returns:
+        np.ndarray | ISS: Either a single array of iterated sums
+            evaluated for one word or an :class:`ISS` object that maps a
+            word to one or more numpy arrays. Each numpy array is of
+            shape ``(N, T)`` or ``(T, )``, based on the shape of the
+            input.
     """
     if semiring is None:
         if normalize is not None:
@@ -110,10 +129,20 @@ def iss(
         word = Word(word) if not isinstance(word, Word) else word
         if not partial:
             return _iss_single(
-                x, word, partial, weighting, semiring, strict
+                x, word,
+                batches=batches,
+                partial=partial,
+                weighting=weighting,
+                semiring=semiring,
+                strict=strict,
             )
         array = _iss_single(
-            x, word, partial, weighting, semiring, strict
+            x, word,
+            batches=batches,
+            partial=partial,
+            weighting=weighting,
+            semiring=semiring,
+            strict=strict,
         )
         return ISS(word.prefixes(), [array[i] for i in range(len(array))])
 
@@ -125,7 +154,13 @@ def iss(
             itsums.append(itsums[w[1][0]][w[0]].copy())
         else:
             itsums.append(
-                iss(x, w[0], w[1], weighting, semiring, strict)  # type: ignore
+                iss(x, w[0],
+                    batches=batches,
+                    partial=w[1],  # type: ignore
+                    weighting=weighting,
+                    semiring=semiring,
+                    strict=strict,
+                )
             )
     for i in range(len(itsums)):
         if isinstance(itsums[i], ISS):
@@ -136,6 +171,7 @@ def iss(
 def _iss_single(
     x: np.ndarray,
     word: Word,
+    batches: int = 1,
     partial: bool = False,
     weighting: Optional[Weighting] = None,
     semiring: Semiring = Reals(),
@@ -151,19 +187,30 @@ def _iss_single(
 
     if word.is_empty():
         return np.ones((x.shape[0], ), dtype=np.float64)
+    orig_dim = x.ndim
     if x.ndim == 1:
         x = x[:, np.newaxis]
-    if x.ndim == 3:
-        y = np.zeros((x.shape[0], x.shape[1]))
-        for i in range(x.shape[0]):
-            y[i] = _iss_single(
-                x[i],
+    if x.ndim == 2:
+        x = x[np.newaxis, :, :]
+    if x.ndim == 3 and batches < x.shape[0]:
+        if partial:
+            y = np.zeros((len(word), x.shape[0], x.shape[1]))
+        else:
+            y = np.zeros((x.shape[0], x.shape[1]))
+        for n in range(ceil(x.shape[0] / batches)):
+            y_n = _iss_single(
+                x[n*batches:(n+1)*batches],
                 word=word,
+                batches=batches,
                 partial=partial,
                 weighting=weighting,
                 semiring=semiring,
                 strict=strict,
             )
+            if partial:
+                y[:, n*batches:(n+1)*batches] = y_n
+            else:
+                y[n*batches:(n+1)*batches] = y_n
         return y
     if x.ndim > 3:
         raise ValueError("Input array has to have at most 3 dimensions")
@@ -196,6 +243,11 @@ def _iss_single(
             result = result.astype(type_)
         except:
             pass
+    if orig_dim < 3:
+        if partial:
+            result = result[:, 0]
+        else:
+            result = result[0]
     return result
 
 
@@ -218,14 +270,14 @@ def _issR(
                     x,
                     word.numpy(),
                     weighting.alpha,
-                    weighting.time(x.shape[0]),
+                    weighting.time(x.shape[1]),
                     normalize,
                 )
             return _partial_exp_reals(
                 x,
                 word.numpy(),
                 weighting.alpha,
-                weighting.time(x.shape[0]),
+                weighting.time(x.shape[1]),
                 normalize,
             )
         if weighting.outer:
@@ -233,14 +285,14 @@ def _issR(
                 x,
                 word.numpy(),
                 weighting.alpha,
-                weighting.time(x.shape[0]),
+                weighting.time(x.shape[1]),
                 normalize,
             )
         return _exp_reals(
             x,
             word.numpy(),
             weighting.alpha,
-            weighting.time(x.shape[0]),
+            weighting.time(x.shape[1]),
             normalize,
         )
     elif isinstance(weighting, Cosine):
@@ -253,14 +305,14 @@ def _issR(
                 x, word.numpy(),
                 alpha=weighting.alpha,
                 expansion=weighting.expansion(word),
-                time=weighting.time(x.shape[0]),
+                time=weighting.time(x.shape[1]),
                 norm=normalize,
             )
         return _cos_reals(
             x, word.numpy(),
             alpha=weighting.alpha,
             expansion=weighting.expansion(word),
-            time=weighting.time(x.shape[0]),
+            time=weighting.time(x.shape[1]),
             norm=normalize,
         )
     else:
