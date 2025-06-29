@@ -1,24 +1,24 @@
 import numpy as np
 
-import iss
+import witss
 
 
 def test_base() -> None:
     x = np.random.random((100, 2))
     words = [
-        iss.Word("[1][1]"),
-        iss.Word("[1][1^2][1]"),
-        iss.Word("[1]"),
-        iss.Word("[1][1][1][1]"),
-        iss.Word("[2][1]"),
-        iss.Word("[1][1][1]"),
-        iss.Word("[2][1][1]"),
-        iss.Word("[2]"),
+        witss.Word("[1][1]"),
+        witss.Word("[1][1^2][1]"),
+        witss.Word("[1]"),
+        witss.Word("[1][1][1][1]"),
+        witss.Word("[2][1]"),
+        witss.Word("[1][1][1]"),
+        witss.Word("[2][1][1]"),
+        witss.Word("[2]"),
     ]
-    bow = iss.BagOfWords(*words)
+    bow = witss.BagOfWords(*words)
 
-    itsums = iss.iss(x, bow)
+    itsums = witss.iss(x, bow)
     for word in words:
         np.testing.assert_allclose(
-            itsums[word], iss.iss(x, word)
+            itsums[word], witss.iss(x, word)
         )

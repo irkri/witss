@@ -1,11 +1,11 @@
 import numpy as np
 
-import iss
+import witss
 
 
 def test_cos() -> None:
     x = np.random.random((50, 3))
-    word = iss.Word("[12][2][33]")
+    word = witss.Word("[12][2][33]")
     alpha = np.pi * np.array([-.2, .6])
 
     actual = np.zeros((x.shape[0], ))
@@ -23,16 +23,16 @@ def test_cos() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=False),
+            weighting=witss.weighting.Cosine(alpha, exponent=1, outer=False),
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
-    word = iss.Word("[2^2][1][13^3]")
+    word = witss.Word("[2^2][1][13^3]")
     alpha = np.pi * np.array([1, .6])
 
     actual = np.zeros((x.shape[0], ))
@@ -50,16 +50,16 @@ def test_cos() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=False),
+            weighting=witss.weighting.Cosine(alpha, exponent=2, outer=False),
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
-    word = iss.Word("[12][2][33]")
+    word = witss.Word("[12][2][33]")
     alpha = np.pi * np.array([-.2, .6])
 
     actual = np.zeros((x.shape[0], ))
@@ -78,17 +78,17 @@ def test_cos() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=False),
+            weighting=witss.weighting.Cosine(alpha, exponent=1, outer=False),
             normalize=True,
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
-    word = iss.Word("[2^2][1][13^3]")
+    word = witss.Word("[2^2][1][13^3]")
     alpha = np.pi * np.array([1, .6])
 
     actual = np.zeros((x.shape[0], ))
@@ -107,10 +107,10 @@ def test_cos() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=False),
+            weighting=witss.weighting.Cosine(alpha, exponent=2, outer=False),
             normalize=True,
         ),
         rtol=1e-4,
@@ -118,7 +118,7 @@ def test_cos() -> None:
 
 def test_cos_outer() -> None:
     x = np.random.random((50, 3))
-    word = iss.Word("[12][2][33]")
+    word = witss.Word("[12][2][33]")
     alpha = np.pi * np.array([.4, .8, 2])
 
     actual = np.zeros((x.shape[0], ))
@@ -137,16 +137,16 @@ def test_cos_outer() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=True),
+            weighting=witss.weighting.Cosine(alpha, exponent=1, outer=True),
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
-    word = iss.Word("[2^2][1][13^3]")
+    word = witss.Word("[2^2][1][13^3]")
     alpha = np.pi * np.array([1.5, -.32, .6])
 
     actual = np.zeros((x.shape[0], ))
@@ -165,17 +165,17 @@ def test_cos_outer() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=True),
+            weighting=witss.weighting.Cosine(alpha, exponent=2, outer=True),
         ),
         rtol=1e-4,
     )
 
 
     x = np.random.random((50, 3))
-    word = iss.Word("[12][2][33]")
+    word = witss.Word("[12][2][33]")
     alpha = np.pi * np.array([.4, .8, 2])
 
     actual = np.zeros((x.shape[0], ))
@@ -195,17 +195,17 @@ def test_cos_outer() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=True),
+            weighting=witss.weighting.Cosine(alpha, exponent=1, outer=True),
             normalize=True,
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
-    word = iss.Word("[2^2][1][13^3]")
+    word = witss.Word("[2^2][1][13^3]")
     alpha = np.pi * np.array([1.5, -.32, .6])
 
     actual = np.zeros((x.shape[0], ))
@@ -225,10 +225,10 @@ def test_cos_outer() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=True),
+            weighting=witss.weighting.Cosine(alpha, exponent=2, outer=True),
             normalize=True,
         ),
         rtol=1e-4,

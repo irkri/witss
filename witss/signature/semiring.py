@@ -1,10 +1,10 @@
-from enum import Enum
-
-
 class Semiring:
-    """A semiring is the space over which operations of an iterated sum
-    are defined. Changing the semiring for the ISS changes the behavior
-    of the construct.
+    """The abstract semiring class. Should not be used as an actual
+    semiring.
+
+    A semiring is the space over which operations of an iterated sum are
+    defined. Changing the semiring for the ISS changes the behavior of
+    the construct.
     """
     ...
 

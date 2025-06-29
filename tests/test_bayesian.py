@@ -1,11 +1,11 @@
 import numpy as np
 
-import iss
+import witss
 
 
 def test_base() -> None:
     x = np.random.random(size=(100, 3))
-    word = iss.Word("[3][21][11]")
+    word = witss.Word("[3][21][11]")
 
     actual = np.zeros((100, ))
 
@@ -23,7 +23,7 @@ def test_base() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word, semiring=iss.semiring.Bayesian()),
+        witss.iss(x, word, semiring=witss.semiring.Bayesian()),
     )
 
     actual = np.zeros((100, ))
@@ -42,13 +42,13 @@ def test_base() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word, semiring=iss.semiring.Bayesian(), strict=True),
+        witss.iss(x, word, semiring=witss.semiring.Bayesian(), strict=True),
     )
 
 
 def test_partial() -> None:
     x = np.random.random(size=(50, 3))
-    word = iss.Word("[3][21][11]")
+    word = witss.Word("[3][21][11]")
 
     actual = np.zeros((3, 50))
 
@@ -75,9 +75,9 @@ def test_partial() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word,
+        witss.iss(x, word,
             partial=True,
-            semiring=iss.semiring.Bayesian(),
+            semiring=witss.semiring.Bayesian(),
         ).numpy(),
     )
 
@@ -106,9 +106,9 @@ def test_partial() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word,
+        witss.iss(x, word,
             partial=True,
-            semiring=iss.semiring.Bayesian(),
+            semiring=witss.semiring.Bayesian(),
             strict=True,
         ).numpy(),
     )

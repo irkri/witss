@@ -1,11 +1,11 @@
 import numpy as np
 
-import iss
+import witss
 
 
 def test_base() -> None:
     x = np.random.random(size=(100, 3))
-    word = iss.Word("[3^(-1)][21][11]")
+    word = witss.Word("[3^(-1)][21][11]")
 
     actual = np.zeros((100, ))
 
@@ -23,7 +23,7 @@ def test_base() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word, semiring=iss.semiring.Arctic()),
+        witss.iss(x, word, semiring=witss.semiring.Arctic()),
     )
 
     actual = np.zeros((100, ))
@@ -42,14 +42,14 @@ def test_base() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word, semiring=iss.semiring.Arctic(), strict=True),
+        witss.iss(x, word, semiring=witss.semiring.Arctic(), strict=True),
     )
 
 
 
 def test_partial() -> None:
     x = np.random.normal(size=(100, 3))
-    word = iss.Word("[3^(-1)][21][11]")
+    word = witss.Word("[3^(-1)][21][11]")
 
     actual = np.zeros((3, 100))
 
@@ -76,7 +76,11 @@ def test_partial() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word, partial=True, semiring=iss.semiring.Arctic()).numpy(),
+        witss.iss(
+            x, word,
+            partial=True,
+            semiring=witss.semiring.Arctic()
+        ).numpy(),
     )
 
     actual = np.zeros((3, 100))
@@ -104,9 +108,9 @@ def test_partial() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(x, word,
+        witss.iss(x, word,
             partial=True,
-            semiring=iss.semiring.Arctic(),
+            semiring=witss.semiring.Arctic(),
             strict=True,
         ).numpy(),
     )
@@ -119,7 +123,7 @@ def test_argmax() -> None:
         [1, 2, 6, 2, 9, -2],
     ]).swapaxes(0, 1).astype(np.float64)
 
-    array, indices = iss.cumargmax(x, iss.Word("[1][2][3]"), partial=True)
+    array, indices = witss.cumargmax(x, witss.Word("[1][2][3]"), partial=True)
     np.testing.assert_allclose(
         array,
         np.array([
@@ -150,7 +154,7 @@ def test_argmax() -> None:
         ])
     )
 
-    array, indices = iss.cumargmax(x, iss.Word("[1][1]"), strict=True)
+    array, indices = witss.cumargmax(x, witss.Word("[1][1]"), strict=True)
     np.testing.assert_allclose(
         array[1:],
         np.array([1., 1., 2., 2., 6.])

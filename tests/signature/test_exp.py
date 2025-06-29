@@ -1,11 +1,11 @@
 import numpy as np
 
-import iss
+import witss
 
 
 def test_exp() -> None:
     x = np.random.normal(size=(50, 3))
-    word = iss.Word("[13][2^2][1]")
+    word = witss.Word("[13][2^2][1]")
     alpha = np.array([.75, .5])
 
     actual = np.zeros((50, ))
@@ -24,10 +24,10 @@ def test_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=witss.weighting.Exponential(alpha, outer=False),
         ),
     )
 
@@ -48,10 +48,10 @@ def test_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=witss.weighting.Exponential(alpha, outer=False),
             normalize=True,
         ),
     )
@@ -59,7 +59,7 @@ def test_exp() -> None:
 
 def test_outer_exp() -> None:
     x = np.random.normal(size=(2, 50, 3))
-    word = iss.Word("[12^3][32][12]")
+    word = witss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8, 2])
 
     actual = np.zeros((2, 50))
@@ -80,10 +80,10 @@ def test_outer_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=True),
+            weighting=witss.weighting.Exponential(alpha, outer=True),
         ),
     )
 
@@ -106,10 +106,10 @@ def test_outer_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=True),
+            weighting=witss.weighting.Exponential(alpha, outer=True),
             normalize=True,
         ),
     )
@@ -117,7 +117,7 @@ def test_outer_exp() -> None:
 
 def test_partial_exp() -> None:
     x = np.random.normal(size=(50, 3))
-    word = iss.Word("[12^3][32][12]")
+    word = witss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8])
 
     actual = np.zeros((3, 50))
@@ -144,10 +144,10 @@ def test_partial_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=True,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=witss.weighting.Exponential(alpha, outer=False),
         ).numpy(),
     )
 
@@ -178,10 +178,10 @@ def test_partial_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             partial=True,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=witss.weighting.Exponential(alpha, outer=False),
             normalize=True,
         ).numpy(),
     )
@@ -189,7 +189,7 @@ def test_partial_exp() -> None:
 
 def test_partial_outer_exp() -> None:
     x = np.random.normal(size=(4, 50, 3))
-    word = iss.Word("[12^3][32][12]")
+    word = witss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8, 2])
 
     actual = np.zeros((3, 4, 50))
@@ -220,11 +220,11 @@ def test_partial_outer_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             batches=1,
             partial=True,
-            weighting=iss.weighting.Exponential(alpha),
+            weighting=witss.weighting.Exponential(alpha),
         ).numpy(),
     )
 
@@ -259,11 +259,11 @@ def test_partial_outer_exp() -> None:
 
     np.testing.assert_allclose(
         actual,
-        iss.iss(
+        witss.iss(
             x, word,
             batches=2,
             partial=True,
-            weighting=iss.weighting.Exponential(alpha),
+            weighting=witss.weighting.Exponential(alpha),
             normalize=True,
         ).numpy(),
     )

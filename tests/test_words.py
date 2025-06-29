@@ -1,16 +1,19 @@
 import numpy as np
 
-import iss
+import witss
+
 
 def test_repr() -> None:
-    assert str(iss.Word("[1(10)^21^43][243^953]")) == "[1^5(10)^23][243^(10)5]"
+    assert (
+        str(witss.Word("[1(10)^21^43][243^953]")) == "[1^5(10)^23][243^(10)5]"
+    )
 
-    assert str(iss.Word("[1^(-10)3^(-3)3^213]")) == "[1^(-9)]"
+    assert str(witss.Word("[1^(-10)3^(-3)3^213]")) == "[1^(-9)]"
 
 
 def test_operations() -> None:
-    word1 = iss.Word("[1^3][3^4]")
-    word2 = iss.Word("[2^14^(-1)][(10)]")
+    word1 = witss.Word("[1^3][3^4]")
+    word2 = witss.Word("[2^14^(-1)][(10)]")
     word = word1*word2
 
     assert str(word) == str(word1*"[2^14^(-1)][(10)]")
@@ -27,13 +30,13 @@ def test_operations() -> None:
         word.numpy(),
     )
 
-    assert word == iss.Word("[111][3^233][4^(3)24^(-4)][2^1(10)2^(-1)]")
+    assert word == witss.Word("[111][3^233][4^(3)24^(-4)][2^1(10)2^(-1)]")
 
     assert word.deconcat() == [
-        (iss.Word(), iss.Word("[1^3][3^4][24^(-1)][(10)]")),
-        (iss.Word("[1^3]"), iss.Word("[3^4][24^(-1)][(10)]")),
-        (iss.Word("[1^3][3^4]"), iss.Word("[24^(-1)][(10)]")),
-        (iss.Word("[1^3][3^4][24^(-1)]"), iss.Word("[(10)]")),
-        (iss.Word("[1^3][3^4][24^(-1)][(10)]"), iss.Word()),
+        (witss.Word(), witss.Word("[1^3][3^4][24^(-1)][(10)]")),
+        (witss.Word("[1^3]"), witss.Word("[3^4][24^(-1)][(10)]")),
+        (witss.Word("[1^3][3^4]"), witss.Word("[24^(-1)][(10)]")),
+        (witss.Word("[1^3][3^4][24^(-1)]"), witss.Word("[(10)]")),
+        (witss.Word("[1^3][3^4][24^(-1)][(10)]"), witss.Word()),
     ]
 
