@@ -1,40 +1,60 @@
 import re
-from typing import Optional, Self
-import warnings
+from typing import Self
 
 import numpy as np
 
 
 class Word:
-    """Words evaluate the iterated sums signature at a certain level."""
+    """Words evaluate the iterated sums signature at a certain level.
+    The easiest way to initialize a word is to supply a string of the
+    form ``"[i_1^k_1...i_a^k_a]...[j_1^l_1...j_b^l_b]"``, where ``i_*``
+    and ``j_*`` are dimensions in a time series (indexing starts at 1),
+    and ``k_*`` and ``l_*`` are optional exponents.
+    For two-digit dimension indices or exponents and negative exponents,
+    brackets are required.
+
+    Example:
+    ```
+        Word("[112^4][3^(-2)][(10)^4]")
+    ```
+    """
 
     RE = re.compile(r"(\[(((-?\d)|\((-?\d+)\))(\^((-?\d)|\((-?\d+)\)))?)+\])+")
     RE_SINGLE = re.compile(r"(?:(\d)|\((\d+)\))(?:\^(?:(-?\d)|\((-?\d+)\)))?")
 
-    def __init__(self, word: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        word: str | Self | list[list[tuple[int, int]]] | None = None,
+    ) -> None:
         self._letters: list[list[tuple[int, int]]] = []
         if word is not None:
             self.multiply(word)
 
     @property
     def max_dim(self) -> int:
+        """The maximum dimension indices (letters) in the word."""
         return max(l[0] for el in self._letters for l in el)
 
     def is_empty(self) -> bool:
         return len(self._letters) == 0
 
     def multiply(self, word: str | Self | list[list[tuple[int, int]]]) -> None:
+        """Multiplies two words together. They can be given as strings,
+        :class:`Word` instances or lists of lists of integer pairs.
+        The multiplication is not commutative and the ``*`` operator can
+        be used as an alternative.
+        """
         if isinstance(word, str):
             if word == "":
                 return
-            if Word.RE.fullmatch(word) is None:
+            if self.__class__.RE.fullmatch(word) is None:
                 raise ValueError("Input string has invalid format")
             for bracket in word.split("]")[:-1]:
                 self._letters.append([])
                 bracket = bracket[1:]
                 dimexps = [
                     ("".join(x[:2]), "".join(x[2:]))
-                    for x in Word.RE_SINGLE.findall(bracket)
+                    for x in self.__class__.RE_SINGLE.findall(bracket)
                 ]
                 dimexps = [
                     (int(dim), int(exp) if exp != "" else 1)
@@ -54,7 +74,7 @@ class Word:
                     collected_dim.pop(ind)
                     collected_exp.pop(ind)
                 self._letters[-1].extend(zip(collected_dim, collected_exp))
-        elif isinstance(word, Word):
+        elif isinstance(word, self.__class__):
             for el in word._letters:
                 self._letters.append(el.copy())
         elif isinstance(word, list):
@@ -64,6 +84,7 @@ class Word:
             raise NotImplementedError
 
     def numpy(self) -> np.ndarray:
+        """Returns a numpy array representation of the word."""
         exps = np.zeros((len(self._letters), self.max_dim), dtype=np.int32)
         for iel, el in enumerate(self._letters):
             for l in el:
@@ -73,15 +94,13 @@ class Word:
     def deconcat(self) -> list[tuple[Self, Self]]:
         """Deconcatenates the word into all possiible word pairs that
         form this word when multiplied together.
-
-        Returns:
-            list[tuple[Word, Word]]: _description_
         """
-        pairs = [(Word(), self.copy())]
+        pairs = [(self.__class__(), self.copy())]
         for i in range(1, len(self._letters)+1):
-            pairs.append(
-                (Word() * self._letters[:i], Word() * self._letters[i:])
-            )
+            pairs.append((
+                self.__class__() * self._letters[:i],
+                self.__class__() * self._letters[i:],
+            ))
         return pairs
 
     def prefixes(self) -> list[Self]:
@@ -90,20 +109,21 @@ class Word:
         """
         prefixes = []
         for i in range(len(self._letters)):
-            prefixes.append(Word() * self._letters[:i+1])
+            prefixes.append(self.__class__() * self._letters[:i+1])
         return prefixes
 
     def copy(self) -> Self:
-        return Word() * self
+        """Returns a copy of this word."""
+        return self.__class__() * self
 
     def __mul__(self, word: str | Self | list[list[tuple[int, int]]] ) -> Self:
-        new_word = Word()
+        new_word = self.__class__()
         new_word.multiply(self)
         new_word.multiply(word)
         return new_word
 
     def __rmul__(self, word: str | list[list[tuple[int, int]]]) -> Self:
-        new_word = Word()
+        new_word = self.__class__()
         new_word.multiply(word)
         new_word.multiply(self)
         return new_word
@@ -115,12 +135,12 @@ class Word:
         return False
 
     def __eq__(self, word: Self) -> bool:
-        if not isinstance(word, (Word, str, list)):
+        if not isinstance(word, (self.__class__, str, list)):
             raise NotImplementedError(
                 f"Cannot compare Word to object of type {type(word)!r}"
             )
-        if not isinstance(word, Word):
-            word = Word(word)
+        if not isinstance(word, self.__class__):
+            word = self.__class__(word)
         if len(word) != len(self):
             return False
 
@@ -170,9 +190,9 @@ class BagOfWords:
             word if isinstance(word, Word) else Word(word)
             for word in words
         ]
-        self.process()
+        self._process()
 
-    def process(self) -> None:
+    def _process(self) -> None:
         self._words = sorted(self._words, key=lambda x: len(x), reverse=True)
         words_r = self._words[::-1]
         references: list[None | tuple[int, int]] = []
@@ -189,11 +209,15 @@ class BagOfWords:
         self._partial_flags = partial_flag
 
     def join(self, other: Self | Word) -> Self:
+        """Joins this BagOfWords with another and returns the resulting
+        instance.
+        """
         if isinstance(other, Word):
-            return BagOfWords(*self._words, other)
-        return BagOfWords(*self._words, *other._words)
+            return self.__class__(*self._words, other)
+        return self.__class__(*self._words, *other._words)
 
     def words(self) -> list[Word]:
+        """Returns a list of words in this BagOfWords."""
         return self._words
 
     def __getitem__(self, index: int) -> tuple[Word, bool | tuple[int, int]]:

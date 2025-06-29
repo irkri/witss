@@ -7,10 +7,28 @@ from ..words.word import Word
 
 
 class Weighting:
+    """Abstract class to be used as a weighting. May not be used as an
+    actual weighting itself.
+    """
     ...
 
 
 class Exponential(Weighting):
+    """An exponential weighting for the iterated sum.
+    The factors inside an iterated sum with two running indices
+    ``t_1<t_2<=t`` for a time series of length ``T`` are:
+    ```
+        exp(-alpha[1]*(t-t_2)/T) * exp(-alpha[0]*(t_2-t_1)/T)
+    ```
+    The alpha factors are ordered from inner to outer weighting.
+
+    Args:
+        alpha (Sequence[float]): The alpha values for the weighting.
+        outer (bool, optional): If set to False, excludes the most outer
+            weighting ``exp(-alpha[-1]*(t-t_p)/T)``. One can achieve the
+            same by setting the last alpha value to zero, except in
+            cases where one wants to also compute partial iterated sums.
+    """
 
     def __init__(
         self,
@@ -33,6 +51,21 @@ class Exponential(Weighting):
 
 
 class Cosine(Weighting):
+    """A cosine weighting for the iterated sum.
+    The factors inside an iterated sum with two running indices
+    ``t_1<t_2<=t`` are:
+    ```
+        cos(-alpha[1]*(t-t_2)/T) * cos(-alpha[0]*(t_2-t_1)/T)
+    ```
+    The alpha factors are ordered from inner to outer weighting.
+
+    Args:
+        alpha (Sequence[float]): The alpha values for the weighting.
+        outer (bool, optional): If set to False, excludes the most outer
+            weighting ``cos(-alpha[-1]*(t-t_p)/T)``. One can achieve the
+            same by setting the last alpha value to zero, except in
+            cases where one wants to also compute partial iterated sums.
+    """
 
     def __init__(
         self,
