@@ -176,7 +176,7 @@ def test_partial() -> None:
 def test_exp() -> None:
     x = np.random.normal(size=(50, 3))
     word = iss.Word("[13][2^2][1]")
-    alpha = np.array([.75, .5])
+    alpha = np.array([.75, .5, 0])
 
     actual = np.zeros((50, ))
 
@@ -197,7 +197,7 @@ def test_exp() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=iss.weighting.Exponential(alpha),
         ),
     )
 
@@ -221,14 +221,12 @@ def test_exp() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=iss.weighting.Exponential(alpha),
             normalize=True,
         ),
     )
 
 
-
-def test_outer_exp() -> None:
     x = np.random.normal(size=(50, 3))
     word = iss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8, 2])
@@ -253,7 +251,7 @@ def test_outer_exp() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=True),
+            weighting=iss.weighting.Exponential(alpha),
         ),
     )
 
@@ -278,7 +276,7 @@ def test_outer_exp() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Exponential(alpha, outer=True),
+            weighting=iss.weighting.Exponential(alpha),
             normalize=True,
         ),
     )
@@ -287,7 +285,7 @@ def test_outer_exp() -> None:
 def test_partial_exp() -> None:
     x = np.random.normal(size=(50, 3))
     word = iss.Word("[12^3][32][12]")
-    alpha = np.array([.4, .8])
+    alpha = np.array([.4, .8, 0])
 
     actual = np.zeros((3, 50))
 
@@ -316,7 +314,7 @@ def test_partial_exp() -> None:
         iss.iss(
             x, word,
             partial=True,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=iss.weighting.Exponential(alpha),
         ).numpy(),
     )
 
@@ -350,13 +348,11 @@ def test_partial_exp() -> None:
         iss.iss(
             x, word,
             partial=True,
-            weighting=iss.weighting.Exponential(alpha, outer=False),
+            weighting=iss.weighting.Exponential(alpha),
             normalize=True,
         ).numpy(),
     )
 
-
-def test_partial_outer_exp() -> None:
     x = np.random.normal(size=(50, 3))
     word = iss.Word("[12^3][32][12]")
     alpha = np.array([.4, .8, 2])
@@ -437,7 +433,7 @@ def test_partial_outer_exp() -> None:
 def test_cos() -> None:
     x = np.random.random((50, 3))
     word = iss.Word("[12][2][33]")
-    alpha = np.pi * np.array([-.2, .6])
+    alpha = np.pi * np.array([-.2, .6, 0])
 
     actual = np.zeros((x.shape[0], ))
     for t in range(x.shape[0]):
@@ -457,14 +453,14 @@ def test_cos() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=False),
+            weighting=iss.weighting.Cosine(alpha, exponent=1),
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
     word = iss.Word("[2^2][1][13^3]")
-    alpha = np.pi * np.array([1, .6])
+    alpha = np.pi * np.array([1, .6, 0])
 
     actual = np.zeros((x.shape[0], ))
     for t in range(x.shape[0]):
@@ -484,14 +480,14 @@ def test_cos() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=False),
+            weighting=iss.weighting.Cosine(alpha, exponent=2),
         ),
         rtol=1e-4,
     )
 
     x = np.random.random((50, 3))
     word = iss.Word("[12][2][33]")
-    alpha = np.pi * np.array([-.2, .6])
+    alpha = np.pi * np.array([-.2, .6, 0])
 
     actual = np.zeros((x.shape[0], ))
     for t in range(x.shape[0]):
@@ -512,7 +508,7 @@ def test_cos() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=False),
+            weighting=iss.weighting.Cosine(alpha, exponent=1),
             normalize=True,
         ),
         rtol=1e-4,
@@ -520,7 +516,7 @@ def test_cos() -> None:
 
     x = np.random.random((50, 3))
     word = iss.Word("[2^2][1][13^3]")
-    alpha = np.pi * np.array([1, .6])
+    alpha = np.pi * np.array([1, .6, 0])
 
     actual = np.zeros((x.shape[0], ))
     for t in range(x.shape[0]):
@@ -541,13 +537,12 @@ def test_cos() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=False),
+            weighting=iss.weighting.Cosine(alpha, exponent=2),
             normalize=True,
         ),
         rtol=1e-4,
     )
 
-def test_cos_outer() -> None:
     x = np.random.random((50, 3))
     word = iss.Word("[12][2][33]")
     alpha = np.pi * np.array([.4, .8, 2])
@@ -571,7 +566,7 @@ def test_cos_outer() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=True),
+            weighting=iss.weighting.Cosine(alpha, exponent=1),
         ),
         rtol=1e-4,
     )
@@ -599,11 +594,10 @@ def test_cos_outer() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=True),
+            weighting=iss.weighting.Cosine(alpha, exponent=2),
         ),
         rtol=1e-4,
     )
-
 
     x = np.random.random((50, 3))
     word = iss.Word("[12][2][33]")
@@ -629,7 +623,7 @@ def test_cos_outer() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=1, outer=True),
+            weighting=iss.weighting.Cosine(alpha, exponent=1),
             normalize=True,
         ),
         rtol=1e-4,
@@ -659,12 +653,10 @@ def test_cos_outer() -> None:
         iss.iss(
             x, word,
             partial=False,
-            weighting=iss.weighting.Cosine(alpha, exponent=2, outer=True),
+            weighting=iss.weighting.Cosine(alpha, exponent=2),
             normalize=True,
         ),
         rtol=1e-4,
     )
 
-
-if __name__ == "__main__":
-    test_base()
+test_exp()
