@@ -48,7 +48,7 @@ def test_base() -> None:
                         / (t-1) / (t_3-1) / (t_2)
                     )
 
-    np.testing.assert_allclose(actual, witss.iss(x, word, normalize=True))
+    np.testing.assert_allclose(actual, witss.iss(x, word, normalize="linear"))
 
     actual = np.zeros((100, ))
 
@@ -65,7 +65,25 @@ def test_base() -> None:
 
     np.testing.assert_allclose(
         actual,
-        witss.iss(x, word, normalize=True, strict=False),
+        witss.iss(x, word, normalize="linear", strict=False),
+    )
+
+    actual = np.zeros((100, ))
+
+    for t in range(100):
+        for t_3 in range(t+1):
+            for t_2 in range(t_3+1):
+                for t_1 in range(t_2+1):
+                    actual[t] += (
+                        x[t_3, 0] * x[t_3, 1] ** (-1)
+                        * x[t_2, 1] * x[t_2, 2]
+                        * x[t_1, 0] * x[t_1, 1] ** 3
+                        / np.sqrt(t+1) / np.sqrt(t_3+1) / np.sqrt(t_2+1)
+                    )
+
+    np.testing.assert_allclose(
+        actual,
+        witss.iss(x, word, normalize="sqrt", strict=False),
     )
 
 
@@ -92,7 +110,10 @@ def test_partial() -> None:
                         * x[t_1, 0] * x[t_1, 1] ** 3
                     )
 
-    np.testing.assert_allclose(actual, witss.iss(x, word, partial=True).numpy())
+    np.testing.assert_allclose(
+        actual,
+        witss.iss(x, word, partial=True).numpy(),
+    )
 
     actual = np.zeros((3, 100))
 
@@ -118,7 +139,7 @@ def test_partial() -> None:
 
     np.testing.assert_allclose(
         actual,
-        witss.iss(x, word, partial=True, normalize=True).numpy(),
+        witss.iss(x, word, partial=True, normalize="linear").numpy(),
     )
 
     actual = np.zeros((3, 100))
@@ -169,5 +190,10 @@ def test_partial() -> None:
 
     np.testing.assert_allclose(
         actual,
-        witss.iss(x, word, partial=True, strict=False, normalize=True).numpy(),
+        witss.iss(
+            x, word,
+            partial=True,
+            strict=False,
+            normalize="linear",
+        ).numpy(),
     )

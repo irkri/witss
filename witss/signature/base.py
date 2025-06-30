@@ -1,7 +1,7 @@
 import warnings
 from collections import OrderedDict
 from math import ceil
-from typing import Literal, Optional, Sequence, overload
+from typing import Literal, Sequence, overload
 
 import numpy as np
 
@@ -40,10 +40,10 @@ def iss(
     word: BagOfWords | Sequence[Word | str],
     batches: int = 1,
     partial: Literal[False] = ...,
-    weighting: Optional[Weighting] = ...,
-    semiring: Optional[Semiring] = ...,
-    strict: Optional[bool] = ...,
-    normalize: bool = ...,
+    weighting: Weighting | None = ...,
+    semiring: Semiring | None = ...,
+    strict: bool | None = ...,
+    normalize: Literal["sqrt", "linear"] | None = ...,
 ) -> ISS:
     ...
 @overload
@@ -52,10 +52,10 @@ def iss(
     word: Word | str,
     batches: int = 1,
     partial: Literal[False] = ...,
-    weighting: Optional[Weighting] = ...,
-    semiring: Optional[Semiring] = ...,
-    strict: Optional[bool] = ...,
-    normalize: bool = ...,
+    weighting: Weighting | None = ...,
+    semiring: Semiring | None = ...,
+    strict: bool | None = ...,
+    normalize: Literal["sqrt", "linear"] | None = ...,
 ) -> np.ndarray:
     ...
 @overload
@@ -64,10 +64,10 @@ def iss(
     word: Word | str,
     batches: int = 1,
     partial: Literal[True] = ...,
-    weighting: Optional[Weighting] = ...,
-    semiring: Optional[Semiring] = ...,
-    strict: Optional[bool] = ...,
-    normalize: bool = ...,
+    weighting: Weighting | None = ...,
+    semiring: Semiring | None = ...,
+    strict: bool | None = ...,
+    normalize: Literal["sqrt", "linear"] | None = ...,
 ) -> ISS:
     ...
 def iss(
@@ -75,10 +75,10 @@ def iss(
     word: BagOfWords | Word | str | Sequence[Word | str],
     batches: int = 1,
     partial: bool = False,
-    weighting: Optional[Weighting] = None,
-    semiring: Optional[Semiring] = None,
-    strict: Optional[bool] = None,
-    normalize: Optional[bool] = None,
+    weighting: Weighting | None = None,
+    semiring: Semiring | None = None,
+    strict: bool | None = None,
+    normalize: Literal["sqrt", "linear"] | None = None,
 ) -> np.ndarray | ISS:
     """Calculate the iterated sums signature of the given time series
     evaluated at the given word.
@@ -109,7 +109,7 @@ def iss(
         strict (bool, optional): Whether to use strict inequalities for
             the time steps of the iterated sum. Defaults to True for the
             Real semiring and False for every other semiring.
-        normalize (bool, optional): This is a convenience argument that
+        normalize (str, optional): This is a convenience argument that
             typically is defined in the Reals semiring. It only gets
             processed if a semiring is not specified. Defaults to None.
 
@@ -156,7 +156,7 @@ def iss(
             itsums.append(
                 iss(x, w[0],
                     batches=batches,
-                    partial=w[1],  # type: ignore
+                    partial=w[1],
                     weighting=weighting,
                     semiring=semiring,
                     strict=strict,
@@ -173,9 +173,9 @@ def _iss_single(
     word: Word,
     batches: int = 1,
     partial: bool = False,
-    weighting: Optional[Weighting] = None,
+    weighting: Weighting | None = None,
     semiring: Semiring = Reals(),
-    strict: Optional[bool] = None,
+    strict: bool | None = None,
 ) -> np.ndarray:
     if not isinstance(x, np.ndarray):
         x = np.array(x)
@@ -220,7 +220,7 @@ def _iss_single(
             partial=partial,
             weighting=weighting,
             strict=True if strict is None else strict,
-            normalize=semiring.normalized,
+            normalization=semiring.normalization(x.shape[1]),
         )
     elif isinstance(semiring, Arctic):
         result = _issA(x, word,
@@ -254,46 +254,42 @@ def _iss_single(
 def _issR(
     x: np.ndarray,
     word: Word,
-    partial: bool = False,
-    weighting: Optional[Weighting] = None,
-    strict: bool = True,
-    normalize: bool = False,
+    partial: bool,
+    weighting: Weighting | None,
+    strict: bool,
+    normalization: np.ndarray,
 ) -> np.ndarray:
     if weighting is None:
         if partial:
-            return _partial_reals(x, word.numpy(), normalize, strict)
-        return _reals(x, word.numpy(), normalize, strict)
+            return _partial_reals(x, word.numpy(), normalization, strict)
+        return _reals(x, word.numpy(), normalization, strict)
     elif isinstance(weighting, Exponential):
         if partial:
             if weighting.outer:
                 return _partial_exp_outer_reals(
-                    x,
-                    word.numpy(),
-                    weighting.alpha,
-                    weighting.time(x.shape[1]),
-                    normalize,
+                    x, word.numpy(),
+                    alpha=weighting.alpha,
+                    time=weighting.time(x.shape[1]),
+                    div=normalization,
                 )
             return _partial_exp_reals(
-                x,
-                word.numpy(),
-                weighting.alpha,
-                weighting.time(x.shape[1]),
-                normalize,
+                x, word.numpy(),
+                alpha=weighting.alpha,
+                time=weighting.time(x.shape[1]),
+                div=normalization,
             )
         if weighting.outer:
             return _exp_outer_reals(
-                x,
-                word.numpy(),
-                weighting.alpha,
-                weighting.time(x.shape[1]),
-                normalize,
+                x, word.numpy(),
+                alpha=weighting.alpha,
+                time=weighting.time(x.shape[1]),
+                div=normalization,
             )
         return _exp_reals(
-            x,
-            word.numpy(),
-            weighting.alpha,
-            weighting.time(x.shape[1]),
-            normalize,
+            x, word.numpy(),
+            alpha=weighting.alpha,
+            time=weighting.time(x.shape[1]),
+            div=normalization,
         )
     elif isinstance(weighting, Cosine):
         if partial:
@@ -306,14 +302,14 @@ def _issR(
                 alpha=weighting.alpha,
                 expansion=weighting.expansion(word),
                 time=weighting.time(x.shape[1]),
-                norm=normalize,
+                div=normalization,
             )
         return _cos_reals(
             x, word.numpy(),
             alpha=weighting.alpha,
             expansion=weighting.expansion(word),
             time=weighting.time(x.shape[1]),
-            norm=normalize,
+            div=normalization,
         )
     else:
         raise NotImplementedError
@@ -394,7 +390,7 @@ def _issA(
     x: np.ndarray,
     word: Word,
     partial: bool = ...,
-    weighting: Optional[Weighting] = ...,
+    weighting: Weighting | None = ...,
     strict: bool = ...,
     indices: Literal[False] = ...,
 ) -> np.ndarray:
@@ -404,7 +400,7 @@ def _issA(
     x: np.ndarray,
     word: Word,
     partial: bool = ...,
-    weighting: Optional[Weighting] = ...,
+    weighting: Weighting | None = ...,
     strict: bool = ...,
     indices: Literal[True] = ...,
 ) -> tuple[np.ndarray, tuple[np.ndarray, ...]]:
@@ -413,7 +409,7 @@ def _issA(
     x: np.ndarray,
     word: Word,
     partial: bool = False,
-    weighting: Optional[Weighting] = None,
+    weighting: Weighting | None = None,
     strict: bool = False,
     indices: bool = False,
 ) -> np.ndarray | tuple[np.ndarray, tuple[np.ndarray, ...]]:
@@ -438,7 +434,7 @@ def _issB(
     x: np.ndarray,
     word: Word,
     partial: bool = False,
-    weighting: Optional[Weighting] = None,
+    weighting: Weighting | None = None,
     strict: bool = False,
 ) -> np.ndarray:
     if np.any(x < 0):

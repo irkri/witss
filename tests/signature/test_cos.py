@@ -82,7 +82,7 @@ def test_cos() -> None:
             x, word,
             partial=False,
             weighting=witss.weighting.Cosine(alpha, exponent=1, outer=False),
-            normalize=True,
+            normalize="linear",
         ),
         rtol=1e-4,
     )
@@ -111,7 +111,7 @@ def test_cos() -> None:
             x, word,
             partial=False,
             weighting=witss.weighting.Cosine(alpha, exponent=2, outer=False),
-            normalize=True,
+            normalize="linear",
         ),
         rtol=1e-4,
     )
@@ -199,7 +199,7 @@ def test_cos_outer() -> None:
             x, word,
             partial=False,
             weighting=witss.weighting.Cosine(alpha, exponent=1, outer=True),
-            normalize=True,
+            normalize="linear",
         ),
         rtol=1e-4,
     )
@@ -229,7 +229,7 @@ def test_cos_outer() -> None:
             x, word,
             partial=False,
             weighting=witss.weighting.Cosine(alpha, exponent=2, outer=True),
-            normalize=True,
+            normalize="linear",
         ),
         rtol=1e-4,
     )

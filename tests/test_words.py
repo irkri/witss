@@ -39,4 +39,3 @@ def test_operations() -> None:
         (witss.Word("[1^3][3^4][24^(-1)]"), witss.Word("[(10)]")),
         (witss.Word("[1^3][3^4][24^(-1)][(10)]"), witss.Word()),
     ]
-

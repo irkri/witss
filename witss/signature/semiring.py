@@ -1,3 +1,8 @@
+from typing import Literal
+
+import numpy as np
+
+
 class Semiring:
     """The abstract semiring class. Should not be used as an actual
     semiring.
@@ -14,18 +19,28 @@ class Reals(Semiring):
     multiplication is the standard space of the ISS.
 
     Args:
-        normalize (bool, optional): If set to true, normalizes the
-            iterated sums by normalizing each cumulative sum. This
-            normalization leads to computing averages instead of sums.
-            Normalization often prevents overflow. Defaults to False.
+        normalize (str, optional): Normalizes the iterated sums by
+            dividing each cumulative sum by some time series. This time
+            series can either be ``np.arange(1, T+1)`` for
+            ``normalize="linear"`` or ``np.sqrt(np.arange(1, T+1))`` for
+            ``normalize="sqrt"``. Defaults to no normalization.
     """
 
-    def __init__(self, normalize: bool = False) -> None:
+    def __init__(
+        self,
+        normalize: Literal["sqrt", "linear"] | None = None,
+    ) -> None:
         self._normalize = normalize
 
-    @property
-    def normalized(self) -> bool:
-        return self._normalize
+    def normalization(self, T: int) -> np.ndarray:
+        if self._normalize is None:
+            return np.ones(T, dtype=np.float64)
+        if self._normalize == "linear":
+            return np.arange(1, T+1, dtype=np.float64)
+        if self._normalize == "sqrt":
+            return np.sqrt(np.arange(1, T+1, dtype=np.float64))
+        else:
+            raise ValueError(f"Normalization {self._normalize} does not exist")
 
 
 class Arctic(Semiring):

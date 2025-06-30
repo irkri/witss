@@ -25,7 +25,7 @@ def _extended_letters_by_weight(w: int, d: int = 1) -> list[str]:
     ]
 
 
-def of_weight(w: int, dim: int = 1) -> tuple[Word, ...]:
+def of_weight(w: int, dim: int = 1) -> list[Word]:
     """Returns a list of all words that have exactly the given number of
     letters ('weight' of the words). For ``w=2`` and ``dim=2``, returns
     a list containing::
@@ -48,4 +48,19 @@ def of_weight(w: int, dim: int = 1) -> tuple[Word, ...]:
                                             for weight in mixed_up_partition])
             for raw_word in raw_words:
                 words.append(Word("".join(raw_word)))
-    return tuple(words)
+    return words
+
+
+def up_to_weight(w: int, dim: int = 1) -> list[Word]:
+    """Returns a list of all words that have a weight less than or equal
+    to the given number.
+
+    Args:
+        w (int): Maximum weight of the words, i.e. number of letters.
+        dim (int, optional): Highest dimension of a letter used.
+            Defaults to 1.
+    """
+    words = []
+    for i in range(1, w+1):
+        words += of_weight(i, dim=dim)
+    return words

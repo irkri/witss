@@ -52,7 +52,7 @@ def test_exp() -> None:
             x, word,
             partial=False,
             weighting=witss.weighting.Exponential(alpha, outer=False),
-            normalize=True,
+            normalize="linear",
         ),
     )
 
@@ -110,7 +110,7 @@ def test_outer_exp() -> None:
             x, word,
             partial=False,
             weighting=witss.weighting.Exponential(alpha, outer=True),
-            normalize=True,
+            normalize="linear",
         ),
     )
 
@@ -182,7 +182,7 @@ def test_partial_exp() -> None:
             x, word,
             partial=True,
             weighting=witss.weighting.Exponential(alpha, outer=False),
-            normalize=True,
+            normalize="linear",
         ).numpy(),
     )
 
@@ -264,6 +264,6 @@ def test_partial_outer_exp() -> None:
             batches=2,
             partial=True,
             weighting=witss.weighting.Exponential(alpha),
-            normalize=True,
+            normalize="linear",
         ).numpy(),
     )

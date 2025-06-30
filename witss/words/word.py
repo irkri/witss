@@ -218,7 +218,20 @@ class BagOfWords:
 
     def words(self) -> list[Word]:
         """Returns a list of words in this BagOfWords."""
-        return self._words
+        return self._words.copy()
+
+    def explain(self) -> str:
+        """Returns a string that indicates which words are computed, and
+        which prefixes of other words are reused.
+        """
+        max_string_length = max(map(len, map(str, self._words)))
+        string = ""
+        for i, (w, ref) in enumerate(zip(self._words, self._references)):
+            string += f"{i}: {str(w).ljust(max_string_length)} - "
+            string += "computed" if ref is None else f"prefix of {ref[0]}"
+            if i < len(self) - 1:
+                string += "\n"
+        return string
 
     def __getitem__(self, index: int) -> tuple[Word, bool | tuple[int, int]]:
         ref = self._references[index]

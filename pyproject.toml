@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Python package for computing weighted iterated sums signatures"
 authors = ["irkri <irkri@irkri.net>"]
 license = "MIT"
+license-files = ["LICENSE"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
