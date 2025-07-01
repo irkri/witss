@@ -1,10 +1,11 @@
 [tool.poetry]
 name = "witss"
-version = "0.1.0"
+version = "1.0.0"
 description = "Python package for computing weighted iterated sums signatures"
 authors = ["irkri <irkri@irkri.net>"]
 license = "MIT"
-license-files = ["LICENSE"]
+keywords = ["iterated sums signature", "feature extraction", "time series"]
+repository = "https://github.com/irkri/witss"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -12,10 +13,9 @@ numpy = "^2.0.2"
 numba = "^0.60.0"
 
 [tool.poetry.group.dev.dependencies]
+matplotlib = "^3.9.2"
 ipykernel = "^6.29.5"
 pytest = "^8.3.3"
-nbformat = "^5.10.4"
-plotly = "^6.2.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -239,10 +239,6 @@ def _iss_single(
 
     if type_ is not None:
         x = x.astype(type_)
-        try:
-            result = result.astype(type_)
-        except:
-            pass
     if orig_dim < 3:
         if partial:
             result = result[:, 0]
@@ -315,14 +311,58 @@ def _issR(
         raise NotImplementedError
 
 
+@overload
+def cumargmax(
+    x: np.ndarray,
+    word: Word | str,
+    partial: Literal[False] = ...,
+    strict: bool = ...,
+    return_iss: Literal[False] = ...,
+) -> np.ndarray:
+    ...
+@overload
+def cumargmax(
+    x: np.ndarray,
+    word: Word | str,
+    partial: Literal[False] = ...,
+    strict: bool = ...,
+    return_iss: Literal[True] = ...,
+) -> tuple[np.ndarray, np.ndarray]:
+    ...
+@overload
+def cumargmax(
+    x: np.ndarray,
+    word: Word | str,
+    partial: Literal[True] = ...,
+    strict: bool = ...,
+    return_iss: Literal[False] = ...,
+) -> tuple[np.ndarray, ...]:
+    ...
+@overload
+def cumargmax(
+    x: np.ndarray,
+    word: Word | str,
+    partial: Literal[True] = ...,
+    strict: bool = ...,
+    return_iss: Literal[True] = ...,
+) -> tuple[np.ndarray, tuple[np.ndarray, ...]]:
+    ...
 def cumargmax(
     x: np.ndarray,
     word: Word | str,
     partial: bool = False,
     strict: bool = False,
-) -> tuple[np.ndarray, tuple[np.ndarray, ...]]:
-    """Returns the arctic iterated sum and the cumulative argmax of the
-    given time series. This time series can be multidimensional.
+    return_iss: bool = False,
+) -> (
+    np.ndarray
+    | tuple[np.ndarray, ...]
+    | tuple[np.ndarray, np.ndarray]
+    | tuple[np.ndarray, tuple[np.ndarray, ...]]
+):
+    """Returns the cumulative argmaxima or argminima of the given time
+    series. This time series can be multidimensional.
+    For example, `cumargmax(x, "++", strict=True)` returns the indices
+    of the two largest values in `x`.
 
     Args:
         x (np.ndarray): Numpy array of shape ``(T,d)``, where ``d`` is
@@ -331,20 +371,22 @@ def cumargmax(
             word. For ``d=1`` dimensional time series, also a string
             consisting of ``+`` and ``-`` is allowed. Here, ``+`` means
             a maximum and ``-`` a minimum. The string ``word="+-+"``
-            leads to the method returning an index array of shape
-            ``(T,3)``, consisting of indices of a maximum, followed by a
-            minimum, followed by a maximum.
+            returns an index array of shape ``(T,3)``, where
+            ``result[t, 0:3]`` are indices of an optimal combination of
+            max-min-max in the input array up to time step ``t``.
         partial (bool, optional): Whether to compute also all prefix
-            words of the supplied Word. Defaults to False.
+            words of the supplied Word. This leads to more than one
+            array being returned. Defaults to False.
         strict (bool, optional): Whether strict inequalities in the
             iterated sum time steps should be used. Defaults to False.
+        return_iss (bool, optional): If set to True, also returns the
+            arctic iterated sums (cumulative maxima/minima). Defaults
+            to False.
 
     Returns:
-        tuple[np.ndarray, tuple[np.ndarray, ...]]: The first entry of
-            the returned tuple is an array with the maxima. The second
-            is a tuple of arrays, in which each array consists of
-            indices. For ``partial=False``, this is always a single
-            array of shape ``(T, len(word))``.
+        np.ndarray | tuple[np.ndarray, ...]: A tuple of arrays, in which
+            each array consists of indices. For ``partial=False``, this
+            is always a single array of shape ``(T, len(word))``.
     """
     if isinstance(word, str) and word.replace("+", "").replace("-", "") == "":
         word = word.replace("+", "[1]").replace("-", "[1^(-1)]")
@@ -363,11 +405,9 @@ def cumargmax(
 
     if type_ is not None:
         x = x.astype(type_)
-        try:
-            result = (result[0].astype(type_), result[1])
-        except:
-            pass
-    return result
+    if not partial:
+        return (result[0], result[1][0]) if return_iss else result[1][0]
+    return result if return_iss else result[1]
 
 
 def split_argmax_output(

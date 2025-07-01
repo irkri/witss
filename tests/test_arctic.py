@@ -123,7 +123,11 @@ def test_argmax() -> None:
         [1, 2, 6, 2, 9, -2],
     ]).swapaxes(0, 1).astype(np.float64)
 
-    array, indices = witss.cumargmax(x, witss.Word("[1][2][3]"), partial=True)
+    array, indices = witss.cumargmax(
+        x, witss.Word("[1][2][3]"),
+        partial=True,
+        return_iss=True,
+    )
     np.testing.assert_allclose(
         array,
         np.array([
@@ -134,13 +138,13 @@ def test_argmax() -> None:
     )
     np.testing.assert_allclose(
         indices[0],
-        np.array([[0], [0], [0], [3], [3], [5]])
+        np.array([[0], [0], [0], [3], [3], [5]]),
     )
     np.testing.assert_allclose(
         indices[1],
         np.array([
             [0., 0.], [0., 0.], [0., 2.], [3., 3.], [3., 3.], [3., 3.],
-        ])
+        ]),
     )
     np.testing.assert_allclose(
         indices[2],
@@ -154,14 +158,18 @@ def test_argmax() -> None:
         ])
     )
 
-    array, indices = witss.cumargmax(x, witss.Word("[1][1]"), strict=True)
-    np.testing.assert_allclose(
-        array[1:],
-        np.array([1., 1., 2., 2., 6.])
+    array, indices = witss.cumargmax(
+        x, witss.Word("[1][1]"),
+        strict=True,
+        return_iss=True,
     )
     np.testing.assert_allclose(
-        indices[0],
-        np.array([[0, 0], [0, 1], [0, 1], [0, 3], [0, 3], [3, 5]])
+        array[1:],
+        np.array([1., 1., 2., 2., 6.]),
+    )
+    np.testing.assert_allclose(
+        indices,
+        np.array([[0, 0], [0, 1], [0, 1], [0, 3], [0, 3], [3, 5]]),
     )
 
 
